@@ -1,19 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 import { useAuth } from '../context/authContext';
 import swal from 'sweetalert';
 import axios from 'axios';
+import { useMutation, useQueryClient } from 'react-query';
 
 Modal.setAppElement('#root');
 
-const UserCreationModal = ({ isOpen, onRequestClose }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [role, setRole] = useState('');
-  const [departement, setDepartement] = useState('');
-  const { token } = useAuth();
+const UserUpdateModal = ({ isOpen, onRequestClose, user }) => {
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
+    const [role, setRole] = useState('');
+    const [departement, setDepartement] = useState('');
+    const { token } = useAuth();
+    const queryClient = useQueryClient();
+  
+    useEffect(() => {
+      if (user) {
+        setFirstName(user.firstName);
+        setLastName(user.lastName);
+        setEmail(user.email.split('@')[0]);
+        setCode(user.code);
+        setRole(user.role);
+        setDepartement(user.departement);
+      } else {
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setCode('');
+        setRole('');
+        setDepartement('');
+      }
+    }, [user]);
+
+    const mutation = useMutation(
+        newUser => {
+          return axios({
+            method: 'put',
+            url: `${process.env.REACT_APP_API_ENDPOINT}/Users/update-user`,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            data: newUser
+          });
+        },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries('users');
+            onRequestClose();
+            swal({
+              title: "Success!",
+              text: user ? "User updated successfully!" : "User created successfully!",
+              icon: "success",
+              timer: 1500,
+              button: false
+            });
+          },
+          onError: (error) => {
+            swal({
+                title: "Error!",
+                text: error.response?.data || 'An error occurred',
+                icon: "error",
+                timer: 2500,
+                button: true
+            });
+          }
+        }
+    );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,52 +84,18 @@ const UserCreationModal = ({ isOpen, onRequestClose }) => {
       });
       return;
     }
-
-    try {
-      const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Auth/register/${
-          role === 'A' ? 'admin' :
-          role === 'P' ? 'acheteur' :
-          role === 'D' ? 'demandeur' : 
-          role === 'V' ? 'validateur' : ''
-        }`,
-        { firstName, lastName, "email" : email+"@elastomer-solutions.com", code, role, departement }, 
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },    
-      });
-
-      if (response.status === 200) {
-        swal({
-          title: "Success!",
-          text: "User created successfully!",
-          icon: "success",
-          timer: 2500,
-          button: false
-        });
-        onRequestClose();
-      }
-    } catch (err) {
-      swal({
-        title: "Error!",
-        text: err.response?.data || 'An error occurred',
-        icon: "error",
-        timer: 2500,
-        button: false
-      });
-    }
+    mutation.mutate({ "id":user.id , firstName, lastName, "email" : email+"@elastomer-solutions.com", code, role, departement });
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onRequestClose={onRequestClose}
-      contentLabel="Create User"
+      contentLabel="Update User"
       className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-auto mt-20"
       overlayClassName="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
     >
-      <h2 className="text-2xl font-bold mb-4">Create User</h2>
+      <h2 className="text-2xl font-bold mb-4">Update User</h2>
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label htmlFor="code" className="block mb-2 text-sm font-medium text-gray-900">Employee ID</label>
@@ -160,11 +182,11 @@ const UserCreationModal = ({ isOpen, onRequestClose }) => {
           type="submit"
           className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"
         >
-          Create User
+          Update User
         </button>
       </form>
     </Modal>
   );
 };
 
-export default UserCreationModal;
+export default UserUpdateModal;

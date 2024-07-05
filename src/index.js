@@ -9,6 +9,9 @@ import Login from './pages/Login';
 import ProtectedRoute from './ProtectedRoute';
 import ForgotPass from './pages/ForgotPass';
 import ErrorPage from './pages/404Page';
+import Layout from './Layout';
+import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -16,7 +19,10 @@ root.render(
     <AuthProvider>
       <Routes>
         <Route element={<ProtectedRoute/>}>
-          <Route index path="/" element={<App />} />
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path='settings' element={<Settings />} />
+          </Route>
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path='/forgotpassword' element={<ForgotPass />} />
