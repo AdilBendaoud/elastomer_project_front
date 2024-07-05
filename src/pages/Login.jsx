@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from "../context/authContext";
+import swal from 'sweetalert';
+
 const Login = () => {
     const [code, setCode] = useState('');
     const [password, setPassword] = useState('');
@@ -11,19 +13,25 @@ const Login = () => {
     
     const handleSubmitEvent = async (e) => {
         e.preventDefault();
-        if (code !== "" && password !== "") {
+        try {
             setLoading(true);
             await auth.loginAction(parseInt(code), password);
-            return;
+        } catch (error) {
+            swal({
+                title: "Error !",
+                text: "please provide a valid code and password",
+                icon: "error",
+                timer: 2500,
+                button: false
+            })
+            setLoading(false);
         }
-        alert("please provide a valid code and password");
-        setLoading(false);
     };
 
   return (
     <section className="bg-gray-50">
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-            <img src="./static/images/elastomer-og-logo.webp" width={400} alt="Elastomer Solution Logo" />
+            <img className="mb-3" src="./static/images/elastomer-logo.jpeg" width={400} alt="Elastomer Solution Logo" />
             <div className="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0">
                 <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
                     <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
@@ -60,7 +68,7 @@ const Login = () => {
                             </button>
                         </div>
                         <div className="flex items-center justify-end">
-                            <a href="" className="text-sm font-medium text-blue-600 hover:underline">Forgot password?</a>
+                            <Link to={'/forgotpassword'} className="text-sm font-medium text-blue-600 hover:underline">Forgot password?</Link>
                         </div>
                         <button
                             type="submit"
