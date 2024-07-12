@@ -3,8 +3,8 @@ import Modal from 'react-modal';
 import { useAuth } from '../context/authContext';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { FaRegEdit } from 'react-icons/fa';
 import { FaRegTrashCan } from "react-icons/fa6";
+import { PiPencilSimpleLine } from 'react-icons/pi';
 
 Modal.setAppElement('#root');
 
@@ -27,7 +27,6 @@ const UpdateRequestModal = ({ isOpen, onRequestClose, request, articles }) => {
             description: item.article.description,
             quantity: item.qtt
         }));
-        console.log(formattedArticles);
         setItems(formattedArticles);
         setCount(formattedArticles.length);
     }, [articles])
@@ -221,14 +220,14 @@ const UpdateRequestModal = ({ isOpen, onRequestClose, request, articles }) => {
                                                 type="button"
                                                 onClick={() => editItem(item.id)}
                                                 title='Edit item'
-                                                className="p-2 rounded-full group transition-all duration-500 flex item-center">
-                                                <FaRegEdit size={20} color='blue' />
+                                                className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200">
+                                                <PiPencilSimpleLine size={24} color='#1A202C' />
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => deleteItem(item.id)}
                                                 title='Delete item'
-                                                className="p-2 rounded-full group transition-all duration-500 flex item-center">
+                                                className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200">
                                                 <FaRegTrashCan size={20} color='red' />
                                             </button>
                                         </div>

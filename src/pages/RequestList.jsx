@@ -4,10 +4,14 @@ import { useAuth } from '../context/authContext';
 import RequestCreationModal from '../components/RequestCreationModal';
 import axios from 'axios';
 import swal from 'sweetalert';
+import Swal from 'sweetalert2';
 import { useQuery } from 'react-query';
-import { FaHistory, FaEdit } from 'react-icons/fa';
+import { FaEye } from 'react-icons/fa';
+import { PiPencilSimpleLine } from "react-icons/pi";
 import UpdateRequestModal from '../components/UpdateRequestModal';
 import RequestHistory from '../components/RequestHistory';
+import { FaCircleXmark, FaClockRotateLeft } from "react-icons/fa6";
+import ShowArticles from '../components/ShowArticles';
 
 const fetchAllUsers = async (code, pageNumber, pageSize,) => {
     let url = `${process.env.REACT_APP_API_ENDPOINT}/Demande?code=${code}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
@@ -58,6 +62,7 @@ function RequestList() {
     const [isAddRequestModalOpen, setIsAddRequestModalOpen] = useState(false);
     const [isUpdateRequestModalOpen, setIsUpdateRequestModalOpen] = useState(false);
     const [isRequestHistoryModalOpen, setIsRequestHistoryModalOpen] = useState(false);
+    const [isRequestDetailsModalOpen, setIsRequestDetailsModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedRequestHistory, setSelectedRequestHistory] = useState(null);
     const [code, setCode] = useState('');
@@ -107,6 +112,50 @@ function RequestList() {
     }
     const closeRequestHistoryModal = () => {
         setIsRequestHistoryModalOpen(false);
+    }
+    const cancelRequest = async (request) => {
+        // Show confirmation dialog using SweetAlert
+        const confirmed = await Swal.fire({
+            title: "Cancel Request",
+            text: "Are you sure you want to cancel the request ?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: "Yes"
+        });
+
+        if (confirmed.isConfirmed) {
+            try {
+                const response = await axios.put(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${request.code}/cancel`,
+                    { "userCode": user.code },
+                    {
+                        headers: {
+                            'Content-type': 'application/json',
+                        }
+                    })
+                if (response.status === 200) {
+                    Swal.fire(
+                        "Success",
+                        "the request has been cancelled .",
+                        'success'
+                    );
+                    refetch()
+                }
+            } catch (error) {
+                Swal.fire(
+                    'Error!',
+                    error.response?.data || 'Failed to cancel  the request .',
+                    'error'
+                );
+            }
+        }
+    }
+    const openRequesDetailsModal = async (request) => {
+        const articles = await fetchArticle(request.code);
+        setArticles(articles);
+        setSelectedRequest(request);
+        setIsRequestDetailsModalOpen(true);
     }
     return (
         <div className={user.role !== 'A' ? "p-4 bg-gray-100 min-h-screen" : "p-4 sm:ml-64 bg-gray-100 min-h-screen"}>
@@ -210,23 +259,50 @@ function RequestList() {
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 "> {request.code}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {request.demandeur.firstName} {request.demandeur.lastName}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {new Date(request.openedAt).toLocaleString('fr-FR')}</td>
-                                                    <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {
-                                                        request.status === 0 ? 'Created' :
-                                                            request.status === 1 ? "Done" :
-                                                                request.status === 2 ? "WO" :
-                                                                    request.status === 3 ? "Cancel" :
-                                                                        request.status === 4 ? "Validated" :
-                                                                            request.status === 5 ? "Rejected" : ''
-                                                    }
+                                                    <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
+                                                        {
+                                                            request.status === 0 ? <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">Created</span> :
+                                                                request.status === 1 ? <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">Done</span> :
+                                                                    request.status === 2 ? <span class="bg-yellow-100 text-yello-800 text-sm font-medium px-3 py-1 rounded-full">Waiting offer</span> :
+                                                                        request.status === 3 ? <span class="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">Cancelled</span> :
+                                                                            request.status === 4 ? <span class="bg-orange-100 text-orange-800 text-sm font-medium px-3 py-1 rounded-full">Validated</span> :
+                                                                                request.status === 5 ? <span class="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">Rejected</span> : ''
+                                                        }
                                                     </td>
-                                                    <td className="p-5 ">
-                                                        <div className="flex items-center gap-1">
-                                                            <button onClick={() => openUpdateRequestModal(request)} title='Edit Request' className="p-2 rounded-full group transition-all duration-500 flex item-center">
-                                                                <FaEdit size={20} color='blue' />
+                                                    <td className="px-5 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => openRequesDetailsModal(request)}
+                                                                title="Show Request Details"
+                                                                className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                            >
+                                                                <FaEye size={22} color="#4A90E2" className="group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => openRequestHistoryModal(request)} title='Request History' className="p-2 rounded-full group transition-all duration-500 flex item-center">
-                                                                <FaHistory size={20} color='gray' />
+                                                            <button
+                                                                onClick={() => openRequestHistoryModal(request)}
+                                                                title="Request History"
+                                                                className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                            >
+                                                                <FaClockRotateLeft size={18} color="#A0AEC0" className="group-hover:scale-110 transition-transform" />
                                                             </button>
+                                                            {((user.role === 'D' && request.status === 0) || (user.role === 'P' && request.status === 2)) && (
+                                                                <button
+                                                                    onClick={() => openUpdateRequestModal(request)}
+                                                                    title="Edit Request"
+                                                                    className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                                >
+                                                                    <PiPencilSimpleLine size={24} color="#1A202C" className="group-hover:scale-110 transition-transform" />
+                                                                </button>
+                                                            )}
+                                                            {user.role === 'D' && request.status === 0 && (
+                                                                <button
+                                                                    onClick={() => cancelRequest(request)}
+                                                                    title="Cancel Request"
+                                                                    className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                                >
+                                                                    <FaCircleXmark size={20} color="#E53E3E" className="group-hover:scale-110 transition-transform" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -239,6 +315,7 @@ function RequestList() {
                     </div>
                 </div>
             </div>
+            <ShowArticles isOpen={isRequestDetailsModalOpen} request={selectedRequest} onRequestClose={() => setIsRequestDetailsModalOpen(false)} articles={articles} />
             <RequestHistory history={selectedRequestHistory} onRequestClose={closeRequestHistoryModal} isOpen={isRequestHistoryModalOpen} />
             <RequestCreationModal code={code} isOpen={isAddRequestModalOpen} onRequestClose={closeAddRequestModal} />
             <UpdateRequestModal articles={articles} request={selectedRequest} isOpen={isUpdateRequestModalOpen} onRequestClose={closeUpdateRequestModal} />
