@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../context/authContext';
 import swal from 'sweetalert';
 import axios from 'axios';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 const fetchEmailSettings = async ({ queryKey }) => {
   const [_, token] = queryKey;
@@ -17,6 +18,7 @@ const fetchEmailSettings = async ({ queryKey }) => {
 const SMTPConfigForm = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: smtpConfig, isLoading, error } = useQuery(['emailSettings', token], fetchEmailSettings);
 
@@ -160,17 +162,24 @@ const SMTPConfigForm = () => {
                   required
                 />
               </div>
-              <div className="mb-4">
+              <div className="mb-6 relative">
                 <label htmlFor="Password" className="block text-gray-700">Password</label>
                 <input
-                  type="password"
+                  tabIndex={1}
+                  type={showPassword ? "text" : "password"}
                   id="Password"
                   name="password"
                   value={formValues.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute top-7 right-2 px-3 py-2 text-gray-600 hover:text-gray-800 focus:outline-none">
+                  {showPassword ? <FiEyeOff size={24} /> : <FiEye size={24} />}
+                </button>
               </div>
             </>
           )}

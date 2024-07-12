@@ -3,8 +3,8 @@ import SMTPConfigForm from '../components/SMTPConfigForm'
 
 function Settings() {
   return (
-    <div className="p-4 sm:ml-64">
-        <div style={{marginTop:100}}>
+    <div className="sm:ml-64">
+        <div style={{marginTop:98}}>
             <SMTPConfigForm />
         </div>
     </div>
