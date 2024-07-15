@@ -53,7 +53,7 @@ function UserPasswordModal({ isOpen, onRequestClose, user, token }) {
         } catch (error) {
             swal({
                 title: "Error!",
-                text: error.response?.data || 'An error occurred',
+                text: 'An error occurred',
                 icon: "error",
                 timer: 2000,
                 button: false

@@ -8,9 +8,9 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
     useEffect(() => {
         const formattedArticles = articles.map((item, index) => ({
             id: index,
-            name: item.article.nom,
-            description: item.article.description,
-            quantity: item.qtt
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity
         }));
         setItems(formattedArticles);
     }, [articles]);

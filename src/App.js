@@ -47,7 +47,7 @@ function App() {
             <Route path="/change-password" element={<Navigate to="/" />} />
             <Route path="/login" element={<Navigate to="/" />} />
             <Route path='/' element={<Layout />}>
-              {user.role != 'A' ? (
+              { !user.roles.includes('A') ? (
                 <>
                   <Route path='/' element={<RequestList />} />
                 </>) : (

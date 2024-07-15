@@ -12,9 +12,11 @@ import UpdateRequestModal from '../components/UpdateRequestModal';
 import RequestHistory from '../components/RequestHistory';
 import { FaCircleXmark, FaClockRotateLeft } from "react-icons/fa6";
 import ShowArticles from '../components/ShowArticles';
+import { FiSend } from "react-icons/fi";
+import SupplierSelectionModal from '../components/SupplierSelectionModal';
 
 const fetchAllUsers = async (code, pageNumber, pageSize,) => {
-    let url = `${process.env.REACT_APP_API_ENDPOINT}/Demande?code=${code}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    let url = `${process.env.REACT_APP_API_ENDPOINT}/Demande?userCode=${code}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
 
     // // Add search query parameter if provided
     // if (searchQuery) {
@@ -43,7 +45,7 @@ const fetchAllUsers = async (code, pageNumber, pageSize,) => {
 const fetchArticle = async (demandeCode) => {
     try {
         const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${demandeCode}/articles`)
-        return response.data.$values;
+        return response.data;
     } catch (error) {
         console.error(error);
     }
@@ -52,7 +54,7 @@ const fetchArticle = async (demandeCode) => {
 const fetchHistory = async (demandeCode) => {
     try {
         const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${demandeCode}/history`)
-        return response.data.$values;
+        return response.data;
     } catch (error) {
         console.error(error);
     }
@@ -63,6 +65,8 @@ function RequestList() {
     const [isUpdateRequestModalOpen, setIsUpdateRequestModalOpen] = useState(false);
     const [isRequestHistoryModalOpen, setIsRequestHistoryModalOpen] = useState(false);
     const [isRequestDetailsModalOpen, setIsRequestDetailsModalOpen] = useState(false);
+    const [isSupplierSelectiomModalOpen, setIsSupplierSelectiomModalOpen] = useState(false);
+    
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedRequestHistory, setSelectedRequestHistory] = useState(null);
     const [code, setCode] = useState('');
@@ -110,9 +114,11 @@ function RequestList() {
         setSelectedRequestHistory(history);
         setIsRequestHistoryModalOpen(true);
     }
+    
     const closeRequestHistoryModal = () => {
         setIsRequestHistoryModalOpen(false);
     }
+
     const cancelRequest = async (request) => {
         // Show confirmation dialog using SweetAlert
         const confirmed = await Swal.fire({
@@ -151,14 +157,21 @@ function RequestList() {
             }
         }
     }
+
     const openRequesDetailsModal = async (request) => {
         const articles = await fetchArticle(request.code);
         setArticles(articles);
         setSelectedRequest(request);
         setIsRequestDetailsModalOpen(true);
     }
+
+    const openSupplierSelectionModal = (request) => {
+        setSelectedRequest(request);
+        setIsSupplierSelectiomModalOpen(true);
+    };
+
     return (
-        <div className={user.role !== 'A' ? "p-4 bg-gray-100 min-h-screen" : "p-4 sm:ml-64 bg-gray-100 min-h-screen"}>
+        <div className={!user.roles.includes('A') ? "p-4 bg-gray-100 min-h-screen" : "p-4 sm:ml-64 bg-gray-100 min-h-screen"}>
             <div className=" p-4 border-2 border-gray rounded-lg bg-white" style={{ marginTop: 100 }}>
                 <div className="flex flex-col ">
                     <div className="overflow-x-auto">
@@ -211,6 +224,7 @@ function RequestList() {
                                         </select>
                                     </div> */}
                                 </div>
+                                {!user.roles.includes("V") &&
                                 <button
                                     onClick={() => openCreatRequestModal(true)}
                                     disabled={loading}
@@ -229,7 +243,7 @@ function RequestList() {
                                         <span className="mr-3">Add Purchase order</span>
                                         <IoMdAdd size={20} />
                                     </>
-                                )}</button>
+                                )}</button>}
                             </div>
                             {isLoading ? (
                                 <div className="text-center h-20">
@@ -254,19 +268,19 @@ function RequestList() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-300">
-                                            {requests.items.$values.map(request => (
+                                            {requests.items.map(request => (
                                                 <tr key={user.code} className="bg-white transition-all duration-500 hover:bg-gray-50">
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 "> {request.code}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {request.demandeur.firstName} {request.demandeur.lastName}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {new Date(request.openedAt).toLocaleString('fr-FR')}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                                         {
-                                                            request.status === 0 ? <span class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">Created</span> :
-                                                                request.status === 1 ? <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">Done</span> :
-                                                                    request.status === 2 ? <span class="bg-yellow-100 text-yello-800 text-sm font-medium px-3 py-1 rounded-full">Waiting offer</span> :
-                                                                        request.status === 3 ? <span class="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">Cancelled</span> :
-                                                                            request.status === 4 ? <span class="bg-orange-100 text-orange-800 text-sm font-medium px-3 py-1 rounded-full">Validated</span> :
-                                                                                request.status === 5 ? <span class="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">Rejected</span> : ''
+                                                            request.status === 0 ? <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">Created</span> :
+                                                                request.status === 1 ? <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">Done</span> :
+                                                                    request.status === 2 ? <span className="bg-yellow-100 text-yello-800 text-sm font-medium px-3 py-1 rounded-full">Waiting offer</span> :
+                                                                        request.status === 3 ? <span className="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">Cancelled</span> :
+                                                                            request.status === 4 ? <span className="bg-orange-100 text-orange-800 text-sm font-medium px-3 py-1 rounded-full">Validated</span> :
+                                                                                request.status === 5 ? <span className="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">Rejected</span> : ''
                                                         }
                                                     </td>
                                                     <td className="px-5 py-3">
@@ -285,7 +299,7 @@ function RequestList() {
                                                             >
                                                                 <FaClockRotateLeft size={18} color="#A0AEC0" className="group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            {((user.role === 'D' && request.status === 0) || (user.role === 'P' && request.status === 2)) && (
+                                                            {((user.roles.includes('D') && request.status === 0) || (user.roles.includes('P') && request.status === 2)) && (
                                                                 <button
                                                                     onClick={() => openUpdateRequestModal(request)}
                                                                     title="Edit Request"
@@ -294,13 +308,22 @@ function RequestList() {
                                                                     <PiPencilSimpleLine size={24} color="#1A202C" className="group-hover:scale-110 transition-transform" />
                                                                 </button>
                                                             )}
-                                                            {user.role === 'D' && request.status === 0 && (
+                                                            {user.roles.includes('D') && request.status === 0 && (
                                                                 <button
                                                                     onClick={() => cancelRequest(request)}
                                                                     title="Cancel Request"
                                                                     className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
                                                                 >
                                                                     <FaCircleXmark size={20} color="#E53E3E" className="group-hover:scale-110 transition-transform" />
+                                                                </button>
+                                                            )}
+                                                            {user.roles.includes('P') && (request.status === 0 || request.status === 2) && (
+                                                                <button
+                                                                    onClick={() => openSupplierSelectionModal(request)}
+                                                                    title="Send Request"
+                                                                    className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                                >
+                                                                    <FiSend size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -319,6 +342,7 @@ function RequestList() {
             <RequestHistory history={selectedRequestHistory} onRequestClose={closeRequestHistoryModal} isOpen={isRequestHistoryModalOpen} />
             <RequestCreationModal code={code} isOpen={isAddRequestModalOpen} onRequestClose={closeAddRequestModal} />
             <UpdateRequestModal articles={articles} request={selectedRequest} isOpen={isUpdateRequestModalOpen} onRequestClose={closeUpdateRequestModal} />
+            <SupplierSelectionModal isOpen={isSupplierSelectiomModalOpen} onRequestClose={()=> setIsSupplierSelectiomModalOpen(false)} request={selectedRequest}/>
         </div>
     )
 }

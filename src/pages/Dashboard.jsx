@@ -45,7 +45,7 @@ function Dashboard() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isUpdateUserModalOpen, setIsUpdateUserModalOpen] = useState(false);
   const [isUpdateUserPasswordModalOpen, setIsUpdateUserPasswordModalOpen] = useState(false);
-  
+
   const [userToUpdate, setUserToUpdate] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState('All');
   const [selectedRole, setSelectedRole] = useState('All');
@@ -55,14 +55,14 @@ function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const openAddUserModal = () => setIsAddUserModalOpen(true);
   const closeAddUserModal = () => setIsAddUserModalOpen(false);
-  
+
   const openUpdateUserModal = (user) => {
     setIsUpdateUserModalOpen(true);
     setUserToUpdate(user);
   };
   const closeUpdateUserModal = () => setIsUpdateUserModalOpen(false);
 
-  const openUpdateUserPasswordModal = (user) =>{
+  const openUpdateUserPasswordModal = (user) => {
     setIsUpdateUserPasswordModalOpen(true);
     setUserToUpdate(user);
   }
@@ -118,7 +118,7 @@ function Dashboard() {
       }
     }
   };
-  
+
   return (
     <div className="p-4 sm:ml-64 bg-gray-100 min-h-screen">
       <div className=" p-4 border-2 border-gray rounded-lg bg-white" style={{ marginTop: 130 }}>
@@ -203,16 +203,18 @@ function Dashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-300">
-                      {users.items.$values.map(user => (
+                      {users.items.map(user => (
                         <tr key={user.code} className="bg-white transition-all duration-500 hover:bg-gray-50">
                           <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 "> {user.code}</td>
                           <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {user.firstName}</td>
                           <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {user.lastName}</td>
                           <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {user.email}</td>
                           <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {
-                            user.role === 'A' ? 'Admin' :
-                              user.role === 'P' ? 'Purchaser' :
-                                user.role === 'D' ? 'Requesteur' : 'Validator'}</td>
+                            user.isAdmin ? 'Admin' :
+                              user.isValidator ? 'Validator' :
+                                user.isPurchaser ? 'Purchaser' :
+                                  'Requesteur'
+                          }</td>
                           <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {user.departement}</td>
                           <td className="p-5 ">
                             <div className="flex items-center gap-1">
@@ -227,7 +229,7 @@ function Dashboard() {
                                   <FaCheck size={20} color='green' />
                                 </button>
                               }
-                              <button onClick={()=> openUpdateUserPasswordModal(user)} title='Change password' className="p-2 rounded-full group transition-all duration-500 flex item-center">
+                              <button onClick={() => openUpdateUserPasswordModal(user)} title='Change password' className="p-2 rounded-full group transition-all duration-500 flex item-center">
                                 <FaKey size={20} color='gray' />
                               </button>
                             </div>

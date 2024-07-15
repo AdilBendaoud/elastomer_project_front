@@ -19,35 +19,61 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
     const [items, setItems] = useState([]);
     const [isEdit, setIsEdit] = useState(false);
     const [id, setId] = useState('');
-    const [suggestions, setSuggestions] = useState([]);
+    const [nameSuggestions, setNameSuggestions] = useState([]);
+    const [descriptionSuggestions, setDescriptionSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
 
 
-    const fetchSuggestions = async (query) => {
+    const fetchNameSuggestions = async (query) => {
         if (!query) {
-            setSuggestions([]);
+            setNameSuggestions([]);
             return;
         }
         try {
             const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/products-suggestions`, {
                 params: { name: query }
             });
-            setSuggestions(response.data);
+            setNameSuggestions(response.data);
         } catch (error) {
             console.error('Error fetching suggestions:', error);
         }
     };
 
-    const handleSuggestionClick = (suggestion) => {
+    const fetchDescriptionSuggestions = async (query) => {
+        if (!query) {
+            setDescriptionSuggestions([]);
+            return;
+        }
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/products-suggestions`, {
+                params: { description : query }
+            });
+            setDescriptionSuggestions(response.data);
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+        }
+    };
+
+    const handleNameSuggestionClick = (suggestion) => {
         setName(suggestion.nom);
+        setNameSuggestions([]);
+    };
+
+    const handleDescriptionSuggestionClick = (suggestion) => {
         setDescription(suggestion.description);
-        setSuggestions([]);
+        setDescriptionSuggestions([]);
     };
 
     const handleNameChange = (e) => {
         const value = e.target.value;
         setName(value);
-        fetchSuggestions(value);
+        fetchNameSuggestions(value);
+    };
+    
+    const handleDescriptionChange = (e) => {
+        const value = e.target.value;
+        setDescription(value);
+        fetchDescriptionSuggestions(value);
     };
 
     const addItem = () => {
@@ -72,6 +98,7 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
         };
 
         try {
+            setLoading(true);
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Demande`, data);
             if (response.status === 200) {
                 swal({
@@ -81,6 +108,7 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
                     buttons: false,
                     timer: 1500,
                 })
+                setLoading(false);
             }
             setItems([]);
             onRequestClose();
@@ -92,6 +120,7 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
                 buttons: false,
                 timer: 1500,
             })
+            setLoading(false);
         }
     };
 
@@ -131,7 +160,7 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
             <form onSubmit={handleSubmit}>
                 <div className='flex flex-row mb-8 items-end'>
                     <div className="mr-4">
-                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900">Name</label>
+                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900">Article</label>
                         <input
                             type="text"
                             id="name"
@@ -139,16 +168,16 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
                             onChange={handleNameChange}
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                        {suggestions.length > 0 && (
+                        {nameSuggestions.length > 0 && (
                             <ul className="absolute z-10 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
-                                {suggestions.map((suggestion, index) => (
+                                {nameSuggestions.map((suggestion, index) => (
                                     <li
                                         key={index}
                                         className="px-4 py-2 cursor-pointer hover:bg-gray-200"
-                                        onClick={() => handleSuggestionClick(suggestion)}
+                                        onClick={() => handleNameSuggestionClick(suggestion)}
                                     >
                                         <div className="font-semibold">{suggestion.nom}</div>
-                                        <div className="text-sm text-gray-600">{suggestion.description}</div>
+                                        {/* <div className="text-sm text-gray-600">{suggestion.description}</div> */}
                                     </li>
                                 ))}
                             </ul>
@@ -160,13 +189,27 @@ const RequestCreationModal = ({ isOpen, onRequestClose, code }) => {
                             type="text"
                             id="description"
                             value={description}
-                            onChange={(e) => setDescription(e.target.value)}
+                            onChange={handleDescriptionChange}
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                        {descriptionSuggestions.length > 0 && (
+                            <ul className="absolute z-10 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                                {descriptionSuggestions.map((suggestion, index) => (
+                                    <li
+                                        key={index}
+                                        className="px-4 py-2 cursor-pointer hover:bg-gray-200"
+                                        onClick={() => handleDescriptionSuggestionClick(suggestion)}
+                                    >
+                                        <div className="text-sm text-gray-600">{suggestion.description}</div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                     <div className="mr-4">
                         <label htmlFor="Quantity" className="block mb-2 text-sm font-medium text-gray-900">Quantity</label>
                         <input
+                            min={1}
                             type="number"
                             id="Quantity"
                             value={quantity}

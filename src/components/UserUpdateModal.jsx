@@ -8,68 +8,71 @@ import { useMutation, useQueryClient } from 'react-query';
 Modal.setAppElement('#root');
 
 const UserUpdateModal = ({ isOpen, onRequestClose, user }) => {
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [code, setCode] = useState('');
-    const [role, setRole] = useState('');
-    const [departement, setDepartement] = useState('');
-    const { token } = useAuth();
-    const queryClient = useQueryClient();
-  
-    useEffect(() => {
-      if (user) {
-        setFirstName(user.firstName);
-        setLastName(user.lastName);
-        setEmail(user.email.split('@')[0]);
-        setCode(user.code);
-        setRole(user.role);
-        setDepartement(user.departement);
-      } else {
-        setFirstName('');
-        setLastName('');
-        setEmail('');
-        setCode('');
-        setRole('');
-        setDepartement('');
-      }
-    }, [user]);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [role, setRole] = useState('');
+  const [departement, setDepartement] = useState('');
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
 
-    const mutation = useMutation(
-        newUser => {
-          return axios({
-            method: 'put',
-            url: `${process.env.REACT_APP_API_ENDPOINT}/Users/update-user`,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            data: newUser
-          });
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+      setEmail(user.email.split('@')[0]);
+      setCode(user.code);
+      user.isAdmin ? setRole("A") :
+        user.isValidator ? setRole("V") :
+          user.isPurchaser ? setRole("P") :
+            setRole("D")
+      setDepartement(user.departement);
+    } else {
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setCode('');
+      setRole('');
+      setDepartement('');
+    }
+  }, [user]);
+
+  const mutation = useMutation(
+    newUser => {
+      return axios({
+        method: 'put',
+        url: `${process.env.REACT_APP_API_ENDPOINT}/Users/update-user`,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries('users');
-            onRequestClose();
-            swal({
-              title: "Success!",
-              text: user ? "User updated successfully!" : "User created successfully!",
-              icon: "success",
-              timer: 1500,
-              button: false
-            });
-          },
-          onError: (error) => {
-            swal({
-                title: "Error!",
-                text: error.response?.data || 'An error occurred',
-                icon: "error",
-                timer: 2500,
-                button: true
-            });
-          }
-        }
-    );
+        data: newUser
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('users');
+        onRequestClose();
+        swal({
+          title: "Success!",
+          text: user ? "User updated successfully!" : "User created successfully!",
+          icon: "success",
+          timer: 1500,
+          button: false
+        });
+      },
+      onError: (error) => {
+        swal({
+          title: "Error!",
+          text: error.response?.data || 'An error occurred',
+          icon: "error",
+          timer: 2500,
+          button: true
+        });
+      }
+    }
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,9 +87,20 @@ const UserUpdateModal = ({ isOpen, onRequestClose, user }) => {
       });
       return;
     }
-    mutation.mutate({ "id":user.id , firstName, lastName, "email" : email+"@elastomer-solutions.com", code, role, departement });
+    mutation.mutate(
+      {
+        "id": user.id,
+        firstName,
+        lastName,
+        "email": email + "@elastomer-solutions.com",
+        code,
+        departement,
+        "isAdmin": role == "A",
+        "isPurchaser": role == "P",
+        "isRequester": role == "D" || role == "P" || role == "A",
+        "IsValidator": role == "V",
+      });
   };
-
   return (
     <Modal
       isOpen={isOpen}
