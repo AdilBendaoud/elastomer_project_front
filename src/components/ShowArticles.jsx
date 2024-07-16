@@ -10,7 +10,9 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
             id: index,
             name: item.name,
             description: item.description,
-            quantity: item.quantity
+            quantity: item.quantity,
+            destination : item.destination,
+            familleDeProduit : item.familleDeProduit
         }));
         setItems(formattedArticles);
     }, [articles]);
@@ -30,6 +32,8 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
                         <tr className="bg-gray-50">
                             <th scope="col" className="p-5 text-left text-sm leading-6 font-semibold text-gray-900 capitalize rounded-t-xl">Name</th>
                             <th scope="col" className="p-5 text-left text-sm leading-6 font-semibold text-gray-900 capitalize">Description</th>
+                            <th scope="col" className="p-5 text-left text-sm leading-6 font-semibold text-gray-900 capitalize">Product Family</th>
+                            <th scope="col" className="p-5 text-left text-sm leading-6 font-semibold text-gray-900 capitalize">Destination</th>
                             <th scope="col" className="p-5 text-left text-sm leading-6 font-semibold text-gray-900 capitalize">Quantity</th>
                         </tr>
                     </thead>
@@ -40,6 +44,8 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
                                 <td className="hideScrollBar p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900" style={{ maxWidth: '300px', overflowX: 'auto'}}>
                                     <div style={{ whiteSpace: 'nowrap' }}>{item.description}</div>
                                 </td>
+                                <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">{item.familleDeProduit}</td>
+                                <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">{item.destination}</td>
                                 <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">{item.quantity}</td>
                             </tr>
                         ))}

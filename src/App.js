@@ -12,6 +12,7 @@ import BlockedPage from './pages/BlockedPage';
 import { useAuth } from './context/authContext';
 import { useEffect } from 'react';
 import RequestList from './pages/RequestList';
+import ArticleProviderPage from './pages/ArticleProviderPage';
 
 function App() {
   const { isAuthenticated, mustChangePassword, isBlocked, user } = useAuth();
@@ -50,6 +51,7 @@ function App() {
               { !user.roles.includes('A') ? (
                 <>
                   <Route path='/' element={<RequestList />} />
+                  <Route path=':requestCode/offers' element={<ArticleProviderPage />} />
                 </>) : (
                 <>
                   <Route index element={<Dashboard />} />

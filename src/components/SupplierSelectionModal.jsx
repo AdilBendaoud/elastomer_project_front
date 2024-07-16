@@ -15,7 +15,7 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
     useEffect(() => {
         const fetchSuppliers = async () => {
             try {
-                const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/suppliers`, {
+                const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/suppliers?demandeCode=${request.code}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -98,9 +98,10 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
                 {suppliers.map(supplier => (
                     <div key={supplier.id} className="flex items-center mb-2">
                         <input
+                            disabled={supplier.isRequestSent}
                             type="checkbox"
                             id={`supplier-${supplier.id}`}
-                            checked={selectedSuppliers.includes(supplier.id)}
+                            checked={selectedSuppliers.includes(supplier.id) || supplier.isRequestSent}
                             onChange={() => handleSupplierToggle(supplier.id)}
                             className="mr-2"
                         />
