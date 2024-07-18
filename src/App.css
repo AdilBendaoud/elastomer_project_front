@@ -16,6 +16,7 @@ input[type=number] {
 
 .hideScrollBar::-webkit-scrollbar {
   height: 4px;
+  width: 8px;
 }
 
 .hideScrollBar::-webkit-scrollbar-track {
