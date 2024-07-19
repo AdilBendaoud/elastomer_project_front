@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { PiPencilSimpleLine } from 'react-icons/pi';
 import { useParams } from 'react-router-dom';
-import EditOffers from '../components/EditOffers';
+import DataGrid, { textEditor } from 'react-data-grid';
+import 'react-data-grid/lib/styles.css';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const OffersPage = () => {
     let { requestCode } = useParams();
-    const [isEditOfferModalOpen, setIsEditOfferModalOpen] = useState(false);
-    const [selectedSupplier, setSelectedSupplier] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [loadingButton, setLoadingButton] = useState(false);
     const [error, setError] = useState('');
 
     const fetchSuppliers = useCallback(async () => {
@@ -56,15 +57,74 @@ const OffersPage = () => {
         }
     }, [requestCode]);
 
-    const openEditOffers = (supplier) => {
-        setSelectedSupplier(supplier);
-        setIsEditOfferModalOpen(true);
-    };
-
     useEffect(() => {
         fetchArticles();
         fetchSuppliers();
     }, [requestCode, fetchArticles, fetchSuppliers]);
+
+    const submitData = async () => {
+        try {
+            let transformedData = [];
+
+            suppliers.forEach(supplier => {
+                const supplierOffers = supplier.offer.map(offer => {
+                    const { unitPrice, quantity, delay } = offer;
+
+                    if (unitPrice !== undefined && quantity !== undefined && delay !== undefined) {
+                        return {
+                            demandeArticleId: offer.demandeArticleId,
+                            devise: 'MAD',
+                            quantity: parseInt(quantity, 10),
+                            unitPrice: parseFloat(unitPrice),
+                            delay: parseInt(delay, 10)
+                        };
+                    }
+                    return null;
+                }).filter(offer => offer !== null);
+
+                if (supplierOffers.length > 0) {
+                    transformedData.push({
+                        supplierId: supplier.id,
+                        items: supplierOffers
+                    });
+                }
+            });
+            setLoadingButton(true);
+            const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Devis`, transformedData    )
+            if (response.status === 200) {
+                Swal.fire(
+                    "Success",
+                    "Offer saved successfully !",
+                    'success'
+                );
+                setLoadingButton(false);
+            }
+        } catch (error) {
+            Swal.fire("Error", error.message, 'error');
+            setLoadingButton(false);
+        }
+    }
+
+
+    const handleRowsChange = (updatedRows) => {
+        const updatedSuppliers = suppliers.map(supplier => {
+            const updatedOffers = updatedRows.map(row => {
+                return {
+                    demandeArticleId: row.id,
+                    unitPrice: row[`${supplier.nom}-unitPrice`],
+                    quantity: row[`${supplier.nom}-quantity`],
+                    delay: row[`${supplier.nom}-delay`]
+                };
+            }).filter(offer => offer.demandeArticleId);
+
+            return {
+                ...supplier,
+                offer: updatedOffers
+            };
+        });
+
+        setSuppliers(updatedSuppliers);
+    };
 
     if (error !== '') {
         return (
@@ -88,88 +148,69 @@ const OffersPage = () => {
         );
     }
 
+    const columns = [
+        {
+            key: 'article', name: "Article", children: [
+                { key: 'name', name: 'Name', frozen: true, width: 150, resizable: true },
+                { key: 'description', name: 'Description', width: 150, resizable: true },
+                { key: 'quantity', name: 'Quantity', width: 100 },
+            ]
+        },
+        ...suppliers.map(supplier => ({
+            name: supplier.nom,
+            children: [
+                { key: `${supplier.nom}-unitPrice`, name: 'Unit Price', renderEditCell: textEditor },
+                { key: `${supplier.nom}-quantity`, name: 'Quantity', renderEditCell: textEditor },
+                { key: `${supplier.nom}-delay`, name: 'Delay', renderEditCell: textEditor },
+            ]
+        })),
+    ];
+
+    const rows = articles.map(article => {
+        const row = {
+            ...article,
+            ...suppliers.reduce((acc, supplier) => {
+                const offer = supplier.offer.find(o => o.demandeArticleId === article.id);
+                if (offer) {
+                    acc[`${supplier.nom}-unitPrice`] = offer.unitPrice;
+                    acc[`${supplier.nom}-quantity`] = offer.quantity;
+                    acc[`${supplier.nom}-delay`] = offer.delay;
+                }
+                return acc;
+            }, {})
+        };
+        return row;
+    });
+
     return (
         <div className="py-9 px-14 bg-gray-100 min-h-screen">
             <div className="px-6 py-4 border-2 border-gray rounded-lg bg-white" style={{ marginTop: 100 }}>
                 <h1 className="text-2xl font-bold mb-4">Articles and Providers</h1>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full bg-white border text-center">
-                        <thead>
-                            <tr>
-                                <th className="px-4 py-2 border" colSpan="3">Articles</th>
-                                {suppliers.map((supplier, index) => (
-                                    <th className="px-4 py-2 border text-center gap-2" colSpan="3" key={index}>
-                                        <span>{supplier.nom}</span>
-                                        <button onClick={() => openEditOffers(supplier)}>
-                                            <PiPencilSimpleLine size={24} color="#1A202C" className="group-hover:scale-110 transition-transform" />
-                                        </button>
-                                    </th>
-                                ))}
-                            </tr>
-                            <tr>
-                                <th className="px-4 py-2 border">Name</th>
-                                <th className="px-4 py-2 border">Description</th>
-                                <th className="px-4 py-2 border">Quantity</th>
-                                {suppliers.map((_, index) => (
-                                    <React.Fragment key={index}>
-                                        <th className="px-4 py-2 border">Unit Price</th>
-                                        <th className="px-4 py-2 border">Quantity</th>
-                                        <th className="px-4 py-2 border">Delay</th>
-                                    </React.Fragment>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {articles.map((article, rowIndex) => (
-                                <tr key={rowIndex}>
-                                    <td className="px-4 py-2 border">{article.name}</td>
-                                    <td className="hideScrollBar p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 border" style={{ maxWidth: '300px', overflowX: 'auto' }}>
-                                        <div style={{ whiteSpace: 'nowrap' }}>{article.description}</div>
-                                    </td>
-                                    <td className="px-4 py-2 border">{article.quantity}</td>
-                                    {suppliers.map((supplier) => {
-                                        const offer = supplier.offer?.find(o => o.demandeArticleId === article.id);
-                                        if (!offer) {
-                                            return (
-                                                <React.Fragment key={supplier.id}>
-                                                    <td className="px-4 py-2 border">-</td>
-                                                    <td className="px-4 py-2 border">-</td>
-                                                    <td className="px-4 py-2 border">-</td>
-                                                </React.Fragment>
-                                            );
-                                        }
-                                        return (
-                                            <React.Fragment key={supplier.id}>
-                                                <td className="px-4 py-2 border">{offer.unitPrice}</td>
-                                                <td className="px-4 py-2 border">{offer.quantity}</td>
-                                                <td className="px-4 py-2 border">{offer.delay}</td>
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td className="px-4 py-2 border font-bold text-right" colSpan="3">Total</td>
-                                {suppliers.map((supplier, index) => (
-                                    <React.Fragment key={index}>
-                                        <td colSpan={3} className="text-center px-4 py-2 border font-bold">$5000</td>
-                                    </React.Fragment>
-                                ))}
-                            </tr>
-                        </tfoot>
-                    </table>
+                <DataGrid
+                    columns={columns}
+                    rows={rows}
+                    onRowsChange={handleRowsChange}
+                    className="rdg-light text-center"
+                />
+                <div className='flex items-center justify-center'>
+
+                    <button
+                        onClick={() => submitData()}
+                        className="w-36 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"
+                    >{loadingButton ? (
+                        <div role="status">
+                            <svg aria-hidden="true" className="inline w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor" />
+                                <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill" />
+                            </svg>
+                            <span className="sr-only">Loading...</span>
+                        </div>
+                    ) : (
+                        'Save Data'
+                    )}</button>
                 </div>
             </div>
-            <EditOffers
-                isOpen={isEditOfferModalOpen}
-                onRequestClose={() => setIsEditOfferModalOpen(false)}
-                articles={articles}
-                provider={selectedSupplier}
-            />
         </div>
     );
 };
-
 export default OffersPage;

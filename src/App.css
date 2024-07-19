@@ -32,3 +32,15 @@ input[type=number] {
 .max-90{
   max-width: 90%;
 }
+
+.rdg {
+  border-collapse: collapse;
+}
+
+.rdg .rdg-cell {
+  border: 1px solid #ddd; /* Adjust the border style as needed */
+}
+
+.rdg .rdg-header-cell {
+  border: 1px solid #ddd; /* Adjust the border style as needed */
+}
