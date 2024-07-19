@@ -157,6 +157,8 @@ const UserCreationModal = ({ isOpen, onRequestClose }) => {
             <option value="MAINT">MAINT</option>
             <option value="RH">RH</option>
             <option value="FIN">FIN</option>
+            <option value="CFO">CFO</option>
+            <option value="COO">COO</option>
           </select>
         </div>
         <button

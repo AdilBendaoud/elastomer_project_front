@@ -51,7 +51,7 @@ function App() {
               { !user.roles.includes('A') ? (
                 <>
                   <Route path='/' element={<RequestList />} />
-                  <Route path=':requestCode/offers' element={<OffersPage />} />
+                  <Route path='/offers/:requestCode' element={<OffersPage />} />
                 </>) : (
                 <>
                   <Route index element={<Dashboard />} />

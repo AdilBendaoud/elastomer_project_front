@@ -6,10 +6,8 @@ import axios from 'axios';
 import swal from 'sweetalert';
 import Swal from 'sweetalert2';
 import { useQuery } from 'react-query';
-import { FaEye } from 'react-icons/fa';
-import { PiPencilSimpleLine } from "react-icons/pi";
-import RequestHistory from '../components/RequestHistory';
-import { FaCircleXmark, FaClockRotateLeft, FaFileCirclePlus } from "react-icons/fa6";
+import { FaEye, FaFile } from 'react-icons/fa';
+import { FaCircleXmark } from "react-icons/fa6";
 import ShowArticles from '../components/ShowArticles';
 import { FiSend } from "react-icons/fi";
 import SupplierSelectionModal from '../components/SupplierSelectionModal';
@@ -51,25 +49,12 @@ const fetchArticle = async (demandeCode) => {
     }
 }
 
-const fetchHistory = async (demandeCode) => {
-    try {
-        const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${demandeCode}/history`)
-        return response.data;
-    } catch (error) {
-        console.error(error);
-    }
-}
-
 function RequestList() {
     const navigate = useNavigate();
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-    const [isRequestHistoryModalOpen, setIsRequestHistoryModalOpen] = useState(false);
     const [isRequestDetailsModalOpen, setIsRequestDetailsModalOpen] = useState(false);
     const [isSupplierSelectiomModalOpen, setIsSupplierSelectiomModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState('create');
-
     const [selectedRequest, setSelectedRequest] = useState(null);
-    const [selectedRequestHistory, setSelectedRequestHistory] = useState(null);
     const [code, setCode] = useState('');
     const [articles, setArticles] = useState([]);
     const { user } = useAuth();
@@ -103,24 +88,8 @@ function RequestList() {
     const openCreatRequestModal = async () => {
         getCode();
         setArticles([]);
-        setSelectedRequest(null)
-        setModalMode('create');
+        setSelectedRequest(null);
         setIsRequestModalOpen(true);
-    }
-
-    const openUpdateRequestModal = async (request) => {
-        const articles = await fetchArticle(request.code);
-        setArticles(articles);
-        setCode(request.code)
-        setSelectedRequest(request);
-        setModalMode('update');
-        setIsRequestModalOpen(true);
-    }
-
-    const openRequestHistoryModal = async (request) => {
-        const history = await fetchHistory(request.code);
-        setSelectedRequestHistory(history);
-        setIsRequestHistoryModalOpen(true);
     }
 
     const cancelRequest = async (request) => {
@@ -284,7 +253,8 @@ function RequestList() {
                                                                     request.status === 2 ? <span className="bg-yellow-100 text-yello-800 text-sm font-medium px-3 py-1 rounded-full">Waiting offer</span> :
                                                                         request.status === 3 ? <span className="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">Cancelled</span> :
                                                                             request.status === 4 ? <span className="bg-orange-100 text-orange-800 text-sm font-medium px-3 py-1 rounded-full">Validated</span> :
-                                                                                request.status === 5 ? <span className="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">Rejected</span> : ''
+                                                                                request.status === 5 ? <span className="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">Rejected</span> :
+                                                                                request.status === 6 ? <span className="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">Waiting for validation</span> : ''
                                                         }
                                                     </td>
                                                     <td className="px-5 py-3">
@@ -296,30 +266,14 @@ function RequestList() {
                                                             >
                                                                 <FaEye size={22} color="#4A90E2" className="group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button
-                                                                onClick={() => openRequestHistoryModal(request)}
-                                                                title="Request History"
-                                                                className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
-                                                            >
-                                                                <FaClockRotateLeft size={18} color="#A0AEC0" className="group-hover:scale-110 transition-transform" />
-                                                            </button>
                                                             {((request.demandeur.code === user.code) || (user.roles.includes('P') && request.status === 2)) && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => openUpdateRequestModal(request)}
-                                                                        title="Edit Request"
-                                                                        className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
-                                                                    >
-                                                                        <PiPencilSimpleLine size={24} color="#1A202C" className="group-hover:scale-110 transition-transform" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => cancelRequest(request)}
-                                                                        title="Cancel Request"
-                                                                        className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
-                                                                    >
-                                                                        <FaCircleXmark size={20} color="#E53E3E" className="group-hover:scale-110 transition-transform" />
-                                                                    </button>
-                                                                </>
+                                                                <button
+                                                                    onClick={() => cancelRequest(request)}
+                                                                    title="Cancel Request"
+                                                                    className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                                >
+                                                                    <FaCircleXmark size={20} color="#E53E3E" className="group-hover:scale-110 transition-transform" />
+                                                                </button>
                                                             )}
                                                             {user.roles.includes('P') && (request.status === 0 || request.status === 2) && (
                                                                 <button
@@ -331,11 +285,11 @@ function RequestList() {
                                                                 </button>
                                                             )}
                                                             <button
-                                                                onClick={() => navigate(`${request.code}/offers`)}
+                                                                onClick={() => navigate(`/offers/${request.code}`)}
                                                                 title="Add Offers"
                                                                 className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
                                                             >
-                                                                <FaFileCirclePlus size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
+                                                                <FaFile  size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </div>
                                                     </td>
@@ -355,18 +309,13 @@ function RequestList() {
                 onRequestClose={() => setIsRequestDetailsModalOpen(false)}
                 articles={articles}
             />
-            <RequestHistory
-                history={selectedRequestHistory}
-                onRequestClose={()=> setIsRequestHistoryModalOpen(false)}
-                isOpen={isRequestHistoryModalOpen}
-            />
             <RequestModal
                 isOpen={isRequestModalOpen}
                 onRequestClose={() => setIsRequestModalOpen(false)}
                 code={code}
                 request={selectedRequest}
                 articles={articles}
-                mode={modalMode}
+                mode={'create'}
             />
             <SupplierSelectionModal
                 isOpen={isSupplierSelectiomModalOpen}
