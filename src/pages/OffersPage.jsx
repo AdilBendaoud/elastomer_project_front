@@ -8,7 +8,7 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import { useAuth } from '../context/authContext';
 
 const OffersPage = () => {
-    const {user} = useAuth()
+    const { user } = useAuth()
     const navigate = useNavigate();
     let { requestCode } = useParams();
     const [suppliers, setSuppliers] = useState([]);
@@ -320,7 +320,7 @@ const OffersPage = () => {
                 <div className="space-y-6">
                     <div className='flex items-center justify-between mb-6'>
                         <h1 className="text-2xl font-bold mb-6">Articles and Providers</h1>
-                        {((request?.status === 2 || request?.status === 5) && user.isPurchaser) &&
+                        {((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) &&
 
                             <button
                                 onClick={submitData}
@@ -334,12 +334,12 @@ const OffersPage = () => {
                     </div>
                     <DataGrid
                         style={{ height: (rows.length + 2) * 40 + 'px' }}
-                        columns={((request?.status === 2 || request?.status === 5) && user.isPurchaser) ? columns : staticColumns}
+                        columns={((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) ? columns : staticColumns}
                         rows={rows}
                         onRowsChange={handleRowsChange}
                         className="rdg-light text-center"
                     />
-                    {((request?.status === 2 || request?.status === 5) && user.isPurchaser) &&
+                    {((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) &&
                         <>
                             <div className="p-4 bg-white rounded-lg max-h-64 overflow-y-auto">
                                 <h2 className="text-xl font-semibold mb-4">Supplier Totals</h2>

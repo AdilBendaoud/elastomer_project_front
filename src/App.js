@@ -13,6 +13,7 @@ import { useAuth } from './context/authContext';
 import { useEffect } from 'react';
 import RequestList from './pages/RequestList';
 import OffersPage from './pages/OffersPage';
+import ValidationPage from './pages/ValidationPage';
 
 function App() {
   const { isAuthenticated, mustChangePassword, isBlocked, user } = useAuth();
@@ -50,6 +51,7 @@ function App() {
             <Route path='/' element={<Layout />}>
               { !user.roles.includes('A') ? (
                 <>
+                  {(user.roles.includes('V') || user.roles.includes('P')) && <Route path='/offers-validation/:requestCode' element={<ValidationPage />} />}
                   <Route path='/' element={<RequestList />} />
                   <Route path='/offers/:requestCode' element={<OffersPage />} />
                 </>) : (

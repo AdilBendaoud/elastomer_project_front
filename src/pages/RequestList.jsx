@@ -11,7 +11,7 @@ import { FaCircleXmark } from "react-icons/fa6";
 import ShowArticles from '../components/ShowArticles';
 import { FiSend } from "react-icons/fi";
 import SupplierSelectionModal from '../components/SupplierSelectionModal';
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const fetchAllRequests = async (code, pageNumber, pageSize,) => {
     let url = `${process.env.REACT_APP_API_ENDPOINT}/Demande?userCode=${code}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
@@ -243,7 +243,12 @@ function RequestList() {
                                         <tbody className="divide-y divide-gray-300">
                                             {requests.items.map(request => (
                                                 <tr key={user.code} className="bg-white transition-all duration-500 hover:bg-gray-50">
-                                                    <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 "> {request.code}</td>
+                                                    <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 ">
+                                                        {((user.roles.includes('V')) || (user.roles.includes('P') && request.status === 4))?
+                                                            <Link className='underline text-blue-600 hover:text-blue-800 visited:text-purple-600' to={`/offers-validation/${request.code}`}>{request.code}</Link> :
+                                                            <p>{request.code}</p>
+                                                        }
+                                                    </td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {request.demandeur.firstName} {request.demandeur.lastName}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"> {new Date(request.openedAt).toLocaleString('fr-FR')}</td>
                                                     <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
@@ -254,7 +259,16 @@ function RequestList() {
                                                                         request.status === 3 ? <span className="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">Cancelled</span> :
                                                                             request.status === 4 ? <span className="bg-orange-100 text-orange-800 text-sm font-medium px-3 py-1 rounded-full">Validated</span> :
                                                                                 request.status === 5 ? <span className="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full">Rejected</span> :
-                                                                                request.status === 6 ? <span className="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">Waiting for validation</span> : ''
+                                                                                    request.status === 6 ? <span className="bg-yellow-100 text-yellow-800 text-sm font-medium px-3 py-1 rounded-full">Waiting for validation</span> :
+                                                                                        (request.status === 7 || request.status === 8) ?
+                                                                                            <span className="text-sm font-medium px-3 py-1 rounded-full">
+                                                                                                <span
+                                                                                                    className={`${request.status === 7 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} text-sm font-medium px-3 py-1 rounded-s-full`}
+                                                                                                >
+                                                                                                    COO
+                                                                                                </span>
+                                                                                                <span className={`${request.status === 8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} text-sm font-medium px-3 py-1 rounded-e-full`}>CFO</span>
+                                                                                            </span> : ''
                                                         }
                                                     </td>
                                                     <td className="px-5 py-3">
@@ -284,13 +298,14 @@ function RequestList() {
                                                                     <FiSend size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                                 </button>
                                                             )}
-                                                            <button
-                                                                onClick={() => navigate(`/offers/${request.code}`)}
-                                                                title="Add Offers"
-                                                                className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
-                                                            >
-                                                                <FaFile  size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
-                                                            </button>
+                                                            {user.roles.includes('P') && (request.status === 5 || request.status === 2) && (
+                                                                <button
+                                                                    onClick={() => navigate(`/offers/${request.code}`)}
+                                                                    title="Add Offers"
+                                                                    className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
+                                                                >
+                                                                    <FaFile size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
+                                                                </button>)}
                                                         </div>
                                                     </td>
                                                 </tr>
