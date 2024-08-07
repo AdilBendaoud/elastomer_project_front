@@ -67,7 +67,7 @@ function UserPasswordModal({ isOpen, onRequestClose, user, token }) {
             onRequestClose={onRequestClose}
             contentLabel="Update User Password"
             className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-auto mt-20"
-            overlayClassName="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
+            overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
             <h2 className="text-2xl font-bold mb-4">Update User Password</h2>
             <form onSubmit={handleSubmit}>

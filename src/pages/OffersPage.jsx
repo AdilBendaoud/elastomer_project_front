@@ -20,6 +20,7 @@ const OffersPage = () => {
     const [error, setError] = useState('');
     const [selectedSupplierId, setSelectedSupplierId] = useState(null);
     const [bestSupplier, setBestSupplier] = useState(null);
+    const currencyOptions = ['USD', 'EUR', 'MAD'];
 
     const fetchSuppliers = useCallback(async () => {
         if (requestCode) {
@@ -30,7 +31,11 @@ const OffersPage = () => {
                 if (!response.ok) {
                     throw new Error('Request failed');
                 }
-                setSuppliers(data);
+                const suppliersWithCurrency = data.map(supplier => ({
+                    ...supplier,
+                    currency: supplier.offer.length > 0 ? supplier.offer[0].devise : 'EUR' // Default currency
+                }));
+                setSuppliers(suppliersWithCurrency);
                 setError('');
                 setLoading(false);
             } catch (error) {
@@ -93,21 +98,20 @@ const OffersPage = () => {
         fetchRequest()
     }, [requestCode, fetchArticles, fetchSuppliers, fetchRequest]);
 
-    const submitData = async () => {
+    const submitData = async (showMessages = true) => {
         try {
             let transformedData = [];
 
             suppliers.forEach(supplier => {
                 const supplierOffers = supplier.offer.map(offer => {
-                    const { unitPrice, quantity, delay } = offer;
+                    const { unitPrice, delay, currency } = offer;
 
-                    if (unitPrice !== undefined && quantity !== undefined && delay !== undefined) {
+                    if (unitPrice !== '') {
                         return {
                             demandeArticleId: offer.demandeArticleId,
-                            devise: 'MAD',
-                            quantity: parseInt(quantity, 10),
+                            devise: supplier.currency,
                             unitPrice: parseFloat(unitPrice),
-                            delay: parseInt(delay, 10)
+                            delay: delay
                         };
                     }
                     return null;
@@ -120,21 +124,38 @@ const OffersPage = () => {
                     });
                 }
             });
+
             setLoadingButton(true);
-            const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Devis`, transformedData)
-            if (response.status === 200) {
+            const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Devis`, transformedData);
+
+            if (response.status === 200 && showMessages) {
                 Swal.fire(
                     "Success",
                     "Offer saved successfully!",
                     'success'
                 );
-                setLoadingButton(false);
             }
+            setLoadingButton(false);
         } catch (error) {
-            Swal.fire("Error", error.message, 'error');
+            if (showMessages) {
+                Swal.fire("Error", error.message, 'error');
+            }
             setLoadingButton(false);
         }
-    }
+    };
+
+
+    const getExchangeRates = () => {
+        return {
+            USD: 0.92,  // 1 USD = 0.92 EUR
+            EUR: 1.0,  // 1 EUR = 1 EUR
+            MAD: 0.092    // 1 MAD = 0.092 EUR
+        };
+    };
+
+    const convertPriceToEUR = (price, currency, exchangeRates) => {
+        return price * exchangeRates[currency];
+    };
 
     const handleRowsChange = (updatedRows) => {
         const updatedSuppliers = suppliers.map(supplier => {
@@ -142,7 +163,6 @@ const OffersPage = () => {
                 return {
                     demandeArticleId: row.id,
                     unitPrice: row[`${supplier.nom}-unitPrice`],
-                    quantity: row[`${supplier.nom}-quantity`],
                     delay: row[`${supplier.nom}-delay`]
                 };
             }).filter(offer => offer.demandeArticleId);
@@ -158,43 +178,77 @@ const OffersPage = () => {
 
     const calculateBestSupplier = (rows, suppliers) => {
         let bestSupplier = null;
-        let bestScore = Infinity;
+        const exchangeRates = getExchangeRates(); //await
 
         suppliers.forEach(supplier => {
-            let totalScore = 0;
+            let hasAllItems = true;
+            let totalPrice = 0;
+            let nbrItems = 0;
 
             rows.forEach(row => {
-                const quantity = parseInt(row[`${supplier.nom}-quantity`], 10) || 0;
                 const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
-                const delay = parseInt(row[`${supplier.nom}-delay`], 10) || 0;
+                const requestedQuantity = parseInt(row.quantity, 10) || 0;
 
-                const requestedQuantity = row.quantity;
-                const quantityDiff = Math.abs(requestedQuantity - quantity);
-                const score = (quantityDiff * 1000) + (unitPrice * 10) + delay;
+                if (unitPrice !== 0) {
+                    nbrItems++;
+                }
 
-                totalScore += score;
+                const unitPriceInEUR = convertPriceToEUR(unitPrice, supplier.currency, exchangeRates);
+                totalPrice += unitPriceInEUR * requestedQuantity;
             });
 
-            if (totalScore < bestScore) {
-                bestScore = totalScore;
-                bestSupplier = supplier;
+            if (nbrItems < rows.length) {
+                hasAllItems = false;
+            }
+
+            if (!bestSupplier) {
+                bestSupplier = {
+                    supplier: supplier,
+                    nbrItems: nbrItems,
+                    hasAllItems: hasAllItems,
+                    totalPrice: totalPrice
+                };
+            } else {
+                if (
+                    (nbrItems > bestSupplier.nbrItems && totalPrice !== 0) ||
+                    (nbrItems === bestSupplier.nbrItems && hasAllItems && !bestSupplier.hasAllItems && totalPrice !== 0) ||
+                    (nbrItems === bestSupplier.nbrItems && hasAllItems && bestSupplier.hasAllItems && totalPrice < bestSupplier.totalPrice && totalPrice !== 0) ||
+                    (!hasAllItems && !bestSupplier.hasAllItems && totalPrice !== 0) ||
+                    (!hasAllItems && !bestSupplier.hasAllItems && totalPrice < bestSupplier.totalPrice && totalPrice !== 0)
+                ) {
+                    bestSupplier = {
+                        supplier: supplier,
+                        nbrItems: nbrItems,
+                        hasAllItems: hasAllItems,
+                        totalPrice: totalPrice,
+                    };
+                }
             }
         });
 
-        return bestSupplier;
+        return bestSupplier ? bestSupplier.supplier : null;
     };
 
     useEffect(() => {
-        if (articles.length > 0 && suppliers.length > 0) {
-            const best = calculateBestSupplier(articles, suppliers);
-            setSelectedSupplierId(best?.id || null);
-            setBestSupplier(best);
-        }
+        const calculateBest = async () => {
+            if (articles.length > 0 && suppliers.length > 0) {
+                const best = await calculateBestSupplier(rows, suppliers);
+                setSelectedSupplierId(best?.id || null);
+                setBestSupplier(best);
+            }
+        };
+        calculateBest();
     }, [articles, suppliers]);
 
     const handleSubmitSelectedOffer = async () => {
         try {
+            await submitData(false);
             setLoadingValidation(true);
+            if (suppliers.find(s => s.id === selectedSupplierId)?.offer.length === 0) {
+                Swal.fire("Error", "the selected supplier has no offers", 'error');
+                setLoadingValidation(false);
+                return;
+            }
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Devis/sendForValidation`, {
                 "demandeCode": requestCode,
                 "supplierId": selectedSupplierId
@@ -213,10 +267,18 @@ const OffersPage = () => {
                     }
                 });
             }
+
         } catch (error) {
             Swal.fire("Error", error.message, 'error');
             setLoadingValidation(false);
         }
+    };
+
+    const handleCurrencyChange = (supplierId, newCurrency) => {
+        const updatedSuppliers = suppliers.map(supplier =>
+            supplier.id === supplierId ? { ...supplier, currency: newCurrency } : supplier
+        );
+        setSuppliers(updatedSuppliers);
     };
 
     if (error !== '') {
@@ -253,7 +315,7 @@ const OffersPage = () => {
             name: supplier.nom,
             children: [
                 { key: `${supplier.nom}-unitPrice`, name: 'Unit Price', renderEditCell: textEditor },
-                { key: `${supplier.nom}-quantity`, name: 'Quantity', renderEditCell: textEditor },
+                { key: `${supplier.nom}-totalPrice`, name: 'Total Price' },
                 { key: `${supplier.nom}-delay`, name: 'Delay', renderEditCell: textEditor },
             ]
         })),
@@ -263,16 +325,16 @@ const OffersPage = () => {
         {
             key: 'article', name: `${requestCode}`, children: [
                 { key: 'name', name: 'Name', frozen: true, width: 150, resizable: true },
-                { key: 'description', name: 'Description', width: 150, resizable: true },
+                {key: 'description', name: 'Description', width: 150, resizable: true},
                 { key: 'quantity', name: 'Quantity', width: 100 },
             ]
         },
         ...suppliers.map(supplier => ({
             name: supplier.nom,
             children: [
-                { key: `${supplier.nom}-unitPrice`, name: 'Unit Price' },
-                { key: `${supplier.nom}-quantity`, name: 'Quantity' },
-                { key: `${supplier.nom}-delay`, name: 'Delay' },
+                { key: `${supplier.nom}-unitPrice`, name: 'Unit Price', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium"},
+                { key: `${supplier.nom}-totalPrice`, name: 'Total Price', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
+                { key: `${supplier.nom}-delay`, name: 'Delay', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
             ]
         })),
     ]
@@ -284,8 +346,12 @@ const OffersPage = () => {
                 const offer = supplier.offer.find(o => o.demandeArticleId === article.id);
                 if (offer) {
                     acc[`${supplier.nom}-unitPrice`] = offer.unitPrice;
-                    acc[`${supplier.nom}-quantity`] = offer.quantity;
+                    acc[`${supplier.nom}-totalPrice`] = offer.unitPrice * article.quantity;
                     acc[`${supplier.nom}-delay`] = offer.delay;
+                } else {
+                    acc[`${supplier.nom}-unitPrice`] = '';
+                    acc[`${supplier.nom}-totalPrice`] = '';
+                    acc[`${supplier.nom}-delay`] = '';
                 }
                 return acc;
             }, {})
@@ -294,11 +360,13 @@ const OffersPage = () => {
     });
 
     const calculateTotals = (rows, suppliers) => {
+        const exchangeRates = getExchangeRates(); //await
         return suppliers.map(supplier => {
             const total = rows.reduce((sum, row) => {
-                const quantity = parseInt(row[`${supplier.nom}-quantity`], 10) || 0;
+                const quantity = parseInt(row.quantity, 10) || 0;
                 const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
-                return sum + (quantity * unitPrice);
+                const unitPriceInEUR = convertPriceToEUR(unitPrice, supplier.currency, exchangeRates);
+                return sum + (quantity * unitPriceInEUR);
             }, 0);
             return { id: supplier.id, total }
         });
@@ -323,7 +391,7 @@ const OffersPage = () => {
                         {((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) &&
 
                             <button
-                                onClick={submitData}
+                                onClick={() => submitData(true)}
                                 type="button"
                                 className="text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5"
                                 disabled={loadingButton}
@@ -341,15 +409,15 @@ const OffersPage = () => {
                     />
                     {((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) &&
                         <>
-                            <div className="p-4 bg-white rounded-lg max-h-64 overflow-y-auto">
+                            <div className="p-4 bg-white rounded-lg">
                                 <h2 className="text-xl font-semibold mb-4">Supplier Totals</h2>
                                 <div className="space-y-2">
                                     {suppliers.map((supplier) => (
                                         <div
                                             key={supplier.id}
                                             className={bestSupplier?.id === supplier.id ?
-                                                "flex max-w-md  items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md bg-green-500" :
-                                                "flex max-w-md  items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"}
+                                                "flex max-w-md items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md bg-green-500" :
+                                                "flex max-w-md items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"}
                                         >
                                             <input
                                                 type="radio"
@@ -363,8 +431,20 @@ const OffersPage = () => {
                                             <label htmlFor={`supplier-${supplier.id}`} className="text-lg font-semibold flex-1">
                                                 {supplier.nom}
                                             </label>
+                                            <div className="flex items-center space-x-2">
+                                                <label className="text-sm">Currency:</label>
+                                                <select
+                                                    value={supplier.currency}
+                                                    onChange={(e) => handleCurrencyChange(supplier.id, e.target.value)}
+                                                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                                                >
+                                                    {currencyOptions.map(currency => (
+                                                        <option key={currency} value={currency}>{currency}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                             <div className="text-sm">
-                                                Total: {totals.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
+                                                Total: € {totals.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
                                             </div>
                                         </div>
                                     ))}
@@ -374,7 +454,7 @@ const OffersPage = () => {
                                 <button
                                     disabled={loadingValidation}
                                     onClick={handleSubmitSelectedOffer}
-                                    className='text-white bg-green-500 border border-blue-600 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5'
+                                    className='text-white bg-green-500 border border-green-600 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5'
                                 >
                                     {loadingValidation ? 'Sending...' : 'Send To Validation'}
                                 </button>

@@ -91,7 +91,7 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
             onRequestClose={onRequestClose}
             contentLabel="Select Suppliers"
             className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl mx-auto mt-20"
-            overlayClassName="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
+            overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
             <h2 className="text-2xl font-bold mb-4">Select Suppliers</h2>
             <div className="mb-4 max-h-80 overflow-y-auto">

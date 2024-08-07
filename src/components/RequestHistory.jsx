@@ -9,7 +9,7 @@ const RequestHistory = ({ isOpen, onRequestClose, history }) => {
             onRequestClose={onRequestClose}
             contentLabel="Create Request"
             className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl mx-auto mt-20"
-            overlayClassName="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
+            overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
             <h2 className="text-2xl font-bold mb-4">Request History</h2>
             <div className="mb-8" style={{ maxHeight: '350px', overflowY: 'auto' }}>

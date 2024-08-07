@@ -8,7 +8,7 @@ import { useAuth } from '../context/authContext';
 import { PiPencilSimpleLine } from 'react-icons/pi';
 Modal.setAppElement('#root');
 
-const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
+const ShowArticles = ({ isOpen, onRequestClose, articles, request, update }) => {
     const { user } = useAuth();
     const [items, setItems] = useState([]);
     const [isRequestHistoryModalOpen, setIsRequestHistoryModalOpen] = useState(false);
@@ -47,8 +47,8 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
             isOpen={isOpen}
             onRequestClose={onRequestClose}
             contentLabel="Create Request"
-            className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-5xl mx-auto mt-20"
-            overlayClassName="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
+            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-5xl mx-auto mt-20"
+            overlayClassName="z-40 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
             <h2 className="text-2xl font-bold mb-4">{request?.code}</h2>
             <div className="mb-8" style={{ maxHeight: '350px', overflowY: 'auto' }}>
@@ -85,7 +85,7 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
                 >
                     <FaClockRotateLeft size={18} color="#A0AEC0" className="group-hover:scale-110 transition-transform" />
                 </button>
-                {(( isOpen && request.demandeur?.code === user.code) || ( isOpen && user.roles.includes('P') && request.status === 2)) && (
+                {(( isOpen && request.demandeur?.code === user.code && request?.status === 0) || ( isOpen && user.roles.includes('P') && request.status === 2)) && (
                     <>
                         <button
                             onClick={() => setIsRequestModalOpen(true)}
@@ -103,6 +103,7 @@ const ShowArticles = ({ isOpen, onRequestClose, articles, request }) => {
                 isOpen={isRequestHistoryModalOpen}
             />
             <RequestModal
+                update={update}
                 isOpen={isRequestModalOpen}
                 onRequestClose={() => setIsRequestModalOpen(false)}
                 code={request?.code}
