@@ -50,7 +50,7 @@ function Dashboard() {
   const [selectedDepartment, setSelectedDepartment] = useState('All');
   const [selectedRole, setSelectedRole] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // Adjust as needed
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [searchQuery, setSearchQuery] = useState('');
   const openAddUserModal = () => setIsAddUserModalOpen(true);
@@ -80,6 +80,7 @@ function Dashboard() {
 
   useEffect(() => {
     refetch();
+    setCurrentPage(1);
   }, [searchQuery, selectedRole, selectedDepartment, refetch]);
 
   const handleBlockUser = async (user, isBlock) => {
@@ -248,12 +249,25 @@ function Dashboard() {
                     <div className="text-sm font-medium text-gray-700">
                       Page {currentPage} of {totalPages}
                     </div>
-                    <button
-                      onClick={() => paginate(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className={`py-2 px-4 rounded-md text-sm font-medium ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}>
-                      Next
-                    </button>
+                    <div>
+                      <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`py-2 px-4 rounded-md text-sm font-medium ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}>
+                        Next
+                      </button>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => {setCurrentPage(1);setItemsPerPage(Number(e.target.value))}}
+                        className="p-2 border border-gray-300 rounded"
+                      >
+                        {[10, 20, 30, 40, 50].map((pageSize) => (
+                          <option key={pageSize} value={pageSize}>
+                            Show {pageSize}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}

@@ -312,10 +312,10 @@ function RequestList() {
                                                             <FiSend size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                         </button>
                                                     )}
-                                                    {user.roles.includes('P') && (request.status === 5 || request.status === 2) && (
+                                                    {user.roles.includes('P') && (request.status === 5 || request.status === 2 || request.status === 1) && (
                                                         <button
                                                             onClick={() => navigate(`/offers/${request.code}`)}
-                                                            title="Add Offers"
+                                                            title="Offers"
                                                             className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
                                                         >
                                                             <FaFile size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
@@ -349,24 +349,26 @@ function RequestList() {
                                         {currentPage} of {pageCount}
                                     </strong>{' '}
                                 </span>
-                                <button
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === pageCount}
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
-                                >
-                                    {'>'}
-                                </button>
-                                <select
-                                    value={itemsPerPage}
-                                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                                    className="p-2 border border-gray-300 rounded"
-                                >
-                                    {[10, 20, 30, 40, 50].map((pageSize) => (
-                                        <option key={pageSize} value={pageSize}>
-                                            Show {pageSize}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div>
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === pageCount}
+                                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+                                    >
+                                        {'>'}
+                                    </button>
+                                    <select
+                                        value={itemsPerPage}
+                                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                        className="p-2 border border-gray-300 rounded ms-5"
+                                    >
+                                        {[10, 20, 30, 40, 50].map((pageSize) => (
+                                            <option key={pageSize} value={pageSize}>
+                                                Show {pageSize}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </>
                     )}
