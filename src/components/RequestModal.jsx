@@ -198,8 +198,8 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
             isOpen={isOpen}
             onRequestClose={closeModal}
             contentLabel="Request Modal"
-            className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl mx-auto mt-10"
-            overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
+            className="z-40 bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl mx-auto mt-10"
+            overlayClassName="z-40 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
             <h2 className="text-2xl font-bold mb-4">{mode === 'create' ? 'Create Request' : 'Update Request'} - {code}</h2>
             <form onSubmit={mode === 'create' ? handleSubmit : handleUpdate}>
@@ -214,7 +214,7 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         {suggestions.length > 0 && suggestionType === "article" && (
-                            <ul className="absolute z-10 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                            <ul className="absolute z-50 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
                                 {suggestions.map((suggestion, index) => (
                                     <li
                                         key={index}
@@ -238,7 +238,7 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         {suggestions.length > 0 && suggestionType === "description" && (
-                            <ul className="absolute z-10 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                            <ul className="absolute z-50 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
                                 {suggestions.map((suggestion, index) => (
                                     <li
                                         key={index}
@@ -267,9 +267,22 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
                             type="text"
                             id="familleDeProduit"
                             value={familleDeProduit}
-                            onChange={(e) => setFamilleDeProduit(e.target.value)}
+                            onChange={handleInputChange(setFamilleDeProduit, "familleDeProduit")}
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                        {suggestions.length > 0 && suggestionType === "familleDeProduit" && (
+                            <ul className="absolute z-50 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                                {suggestions.map((suggestion, index) => (
+                                    <li
+                                        key={index}
+                                        className="px-4 py-2 cursor-pointer hover:bg-gray-200"
+                                        onClick={() => { setFamilleDeProduit(suggestion.familleDeProduit); setSuggestions([]); }}
+                                    >
+                                        <div className="font-semibold">{suggestion.familleDeProduit}</div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                     <div className="mr-4">
                         <label htmlFor="destination" className="block mb-2 text-sm font-medium text-gray-900">Destination</label>
@@ -277,9 +290,22 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
                             type="text"
                             id="destination"
                             value={destination}
-                            onChange={(e) => setDestination(e.target.value)}
+                            onChange={handleInputChange(setDestination, "destination")}
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                        {suggestions.length > 0 && suggestionType === "destination" && (
+                            <ul className="absolute z-50 max-w-4xl bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                                {suggestions.map((suggestion, index) => (
+                                    <li
+                                        key={index}
+                                        className="px-4 py-2 cursor-pointer hover:bg-gray-200"
+                                        onClick={() => { setDestination(suggestion.familleDeProduit); setSuggestions([]); }}
+                                    >
+                                        <div className="font-semibold">{suggestion.destination}</div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                     <div>
                         <button

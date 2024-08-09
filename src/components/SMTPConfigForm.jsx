@@ -34,7 +34,15 @@ const SMTPConfigForm = () => {
 
   useEffect(() => {
     if (smtpConfig) {
-      setFormValues(smtpConfig);
+      setFormValues({
+        smtpServer: smtpConfig.smtpServer,
+        port: smtpConfig.port,
+        username:  smtpConfig.useAuthentication ? smtpConfig.username : '',
+        password: smtpConfig.useAuthentication ? smtpConfig.password : '' ,
+        enableSsl: smtpConfig.enableSsl,
+        from: smtpConfig.from,
+        useAuthentication: smtpConfig.useAuthentication
+      });
     }
   }, [smtpConfig]);
 
@@ -86,7 +94,7 @@ const SMTPConfigForm = () => {
   if (error) return <div>Error loading settings: {error.message}</div>;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="pt-36 flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">SMTP Configuration</h2>
         <form onSubmit={handleSubmit}>

@@ -114,7 +114,7 @@ const UserUpdateModal = ({ isOpen, onRequestClose, user }) => {
       isOpen={isOpen}
       onRequestClose={onRequestClose}
       contentLabel="Update User"
-      className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-auto mt-10"
+      className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-lg mx-auto mt-10"
       overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
     >
       <h2 className="text-2xl font-bold mb-4">Update User</h2>
@@ -162,9 +162,10 @@ const UserUpdateModal = ({ isOpen, onRequestClose, user }) => {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-1/2 mr-5 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
+          <span className='w1/2'>@elastomer-solutions.com</span>
         </div>
         <div className='mb-4'>
           <label htmlFor="role" className="block mb-2 text-sm font-medium text-gray-900">Select a Role</label>

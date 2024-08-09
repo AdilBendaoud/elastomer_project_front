@@ -27,11 +27,13 @@ function ValidationPage() {
     const [comment, setComment] = useState('');
     const [total, setTotal] = useState(0);
 
-    const getExchangeRates = () => {
+    const getExchangeRates = async () => {
+        const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Settings/get-currency-settings`);
         return {
-            USD: 0.92,  // 1 USD = 0.92 EUR
-            EUR: 1.0,  // 1 EUR = 1 EUR
-            MAD: 0.092    // 1 MAD = 0.092 EUR
+            USD: response.data.usdToEur,
+            EUR: 1.0,
+            MAD: response.data.madToEur,
+            GBP : response.data.gbpToEur
         };
     };
 
@@ -56,8 +58,8 @@ function ValidationPage() {
         }
     }, [requestCode]);
 
-    const calculateTotals = (supplier, myArticles) => {
-        const exchangeRates = getExchangeRates();
+    const calculateTotals = async (supplier, myArticles) => {
+        const exchangeRates = await getExchangeRates();
         let totalInEur = 0;
         let originalTotal = 0;
         supplier.offer?.map((item) => {
@@ -68,6 +70,10 @@ function ValidationPage() {
             totalInEur += (quantity * unitPriceInEUR);
             originalTotal += (quantity * unitPrice);
         });
+        console.log({
+            "originalTotal": originalTotal?.toFixed(2),
+            "totalInEur": totalInEur?.toFixed(2)
+        })
         setTotal({
             "originalTotal": originalTotal?.toFixed(2),
             "totalInEur": totalInEur?.toFixed(2)
@@ -151,7 +157,7 @@ function ValidationPage() {
                 { key: 'delay', name: 'Delay', name: 'Delay' },
             ]
         }, {
-            key: 'purchaseOrder', name: 'Purchase Order', renderEditCell: textEditor, editable: true
+            key: 'purchaseOrder', name: 'Purchase Order'
         }
     ]
 
@@ -315,7 +321,7 @@ function ValidationPage() {
             if (showMessages) {
                 setLoadingButton(true);
             }
-            var response = await axios.put(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${requestCode}/add-purchase-order`, data);
+            var response = await axios.put(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${requestCode}/add-purchase-order/${user?.code}`, data);
             if (response.status === 200 && showMessages) {
                 Swal.fire(
                     "Success",
@@ -330,7 +336,7 @@ function ValidationPage() {
                 error.response?.data || 'Failed to save  the request .',
                 'error'
             );
-            setValidationLoading(false);
+            setLoadingButton(false);
         }
     }
 
@@ -365,26 +371,15 @@ function ValidationPage() {
                 "comment": comment
             });
             if (response.status === 200) {
-                Swal.fire(
-                    "Success",
-                    "the request has been marked as done .",
-                    'success'
-                ).then(() => {
-                    if (user.departement === 'COO') {
-                        setCOOComment(comment)
-                    } else if (user.departement === 'CFO') {
-                        setCFOComment(comment)
-                    }
-                    setComment('');
-                });
+                if (user.departement === 'COO') {
+                    setCOOComment(comment)
+                } else if (user.departement === 'CFO') {
+                    setCFOComment(comment)
+                }
+                setComment('');
                 setLoadingMarkAsDone(false);
             }
         } catch (error) {
-            Swal.fire(
-                'Error!',
-                error.response?.data || 'Error occurred .',
-                'error'
-            );
             setLoadingMarkAsDone(false);
         }
     }
@@ -503,7 +498,7 @@ function ValidationPage() {
                     }
 
                     rows={
-                        (user.roles.includes('P') && request?.status === 4) || (user.roles.includes('P') && request?.status === 1) ? rowsShort :
+                        ((user.roles.includes('P') && request?.status === 4) || (user.roles.includes('P') && request?.status === 1)) ? rowsShort :
                             rows}
 
                     className="rdg-light text-center mb-4"
@@ -550,8 +545,12 @@ function ValidationPage() {
                             <button
                                 onClick={addComment}
                                 type="button"
-                                className="self-end text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-4"
-                                disabled={loadingButton}
+                                className={
+                                    comment.trim() === '' ? 
+                                    "self-end  bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 mb-4" :
+                                    "self-end text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-4"
+                                }
+                                disabled={loadingButton || comment.trim() === ''}
                             >
                                 <span>
                                     {loadingButton ? 'Saving...' : 'Save'}

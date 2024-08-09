@@ -3,6 +3,7 @@ import Modal from 'react-modal';
 import axios from 'axios';
 import { useAuth } from '../context/authContext';
 import Swal from 'sweetalert2';
+import { FaXmark } from "react-icons/fa6";
 
 Modal.setAppElement('#root');
 
@@ -10,17 +11,22 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
     const { token, user } = useAuth();
     const [suppliers, setSuppliers] = useState([]);
     const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+    const [previouslySelectedSuppliers, setPreviouslySelectedSuppliers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const fetchSuppliers = async () => {
             try {
-                const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/suppliers?demandeCode=${request.code}`, {
+                const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${request?.code}/suppliers`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
-                setSuppliers(response.data);
+                const fetchedSuppliers = response.data;
+                setSuppliers(fetchedSuppliers);
+                setPreviouslySelectedSuppliers(fetchedSuppliers.map(supplier => supplier.nom));
             } catch (error) {
                 console.error('Error fetching suppliers:', error);
             }
@@ -28,25 +34,53 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
         if (isOpen) {
             fetchSuppliers();
         }
-    }, [isOpen, token]);
+    }, [isOpen, token, request?.code]);
 
-    const handleSupplierToggle = (supplierId) => {
-        setSelectedSuppliers(prev =>
-            prev.includes(supplierId)
-                ? prev.filter(id => id !== supplierId)
-                : [...prev, supplierId]
-        );
+    const handleSupplierSelect = (supplier) => {
+        if (!selectedSuppliers.find(s => s.id === supplier.id)) {
+            setSelectedSuppliers([...selectedSuppliers, { id: supplier.id, name: supplier.nom }]);
+        }
+        setSearchTerm('');
+        setSuggestions([]);
+    };
+
+    const handleSupplierRemove = (supplierId) => {
+        setSelectedSuppliers(selectedSuppliers.filter(supplier => supplier.id !== supplierId));
+    };
+
+    const handleSearchChange = async (e) => {
+        setSearchTerm(e.target.value);
+        if (e.target.value.length > 1) {
+            try {
+                const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/suppliers/search`, {
+                    params: {
+                        query: e.target.value,
+                        requestCode: request?.code
+                    }
+                });
+                setSuggestions(response.data);
+            } catch (error) {
+                console.error('Error fetching supplier suggestions:', error);
+            }
+        } else {
+            setSuggestions([]);
+        }
     };
 
     const handleSubmit = async () => {
-        const requestCode = request.code;
-        const userCode = user.code;
+        const requestCode = request?.code;
+        const userCode = user?.code;
+        const previouslySelectedSupplierIds = new Set(suppliers.filter(supplier => previouslySelectedSuppliers.includes(supplier.nom)).map(supplier => supplier.id));
+        const newSupplierIds = selectedSuppliers
+            .filter(supplier => !previouslySelectedSupplierIds.has(supplier.id))
+            .map(supplier => supplier.id);
+
         try {
             setLoading(true);
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Suppliers/send-to-suppliers`, {
                 userCode,
                 requestCode,
-                supplierIds: selectedSuppliers
+                supplierIds: newSupplierIds
             }, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -54,30 +88,25 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
             });
             if (response.status === 200) {
                 Swal.fire({
-                    title: "Success !",
-                    text: "Request sent to suppliers successfully !",
+                    title: "Success!",
+                    text: "Request sent to suppliers successfully!",
                     icon: 'success',
-                    showCancelButton: false,
                     timer: 2000
-                });
-                setLoading(false);
-                onRequestClose();
+                }).then(closeModal());
             } else {
                 Swal.fire({
-                    title: "Eroor !",
-                    text: "Failed to send request to suppliers !",
+                    title: "Error!",
+                    text: "Failed to send request to suppliers!",
                     icon: 'error',
-                    showCancelButton: false,
                     timer: 2000
                 });
-                setLoading(false);
             }
+            setLoading(false);
         } catch (error) {
             Swal.fire({
-                title: "Eroor !",
-                text: "An error occurred !",
+                title: "Error!",
+                text: "An error occurred!",
                 icon: 'error',
-                showCancelButton: false,
                 timer: 2000
             });
             console.error('Error sending request to suppliers:', error);
@@ -85,47 +114,71 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
         }
     };
 
+    const closeModal = () => {
+        setSuppliers([]);
+        setSelectedSuppliers([]);
+        setPreviouslySelectedSuppliers([]);
+        onRequestClose();
+    }
+
     return (
         <Modal
             isOpen={isOpen}
-            onRequestClose={onRequestClose}
+            onRequestClose={closeModal}
             contentLabel="Select Suppliers"
             className="z-50 bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl mx-auto mt-20"
             overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
             <h2 className="text-2xl font-bold mb-4">Select Suppliers</h2>
-            <div className="mb-4 max-h-80 overflow-y-auto">
-                {suppliers.map(supplier => (
-                    <div key={supplier.id} className="flex items-center mb-2">
-                        <input
-                            disabled={supplier.isRequestSent}
-                            type="checkbox"
-                            id={`supplier-${supplier.id}`}
-                            checked={selectedSuppliers.includes(supplier.id) || supplier.isRequestSent}
-                            onChange={() => handleSupplierToggle(supplier.id)}
-                            className="mr-2"
-                        />
-                        <label htmlFor={`supplier-${supplier.id}`} className="text-gray-900">
-                            {supplier.nom}
-                        </label>
+            <div className="mb-4 relative">
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    placeholder="Search for a supplier"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {suggestions.length > 0 && (
+                    <ul className="absolute z-50 bg-white border border-gray-300 rounded-lg mt-2 w-full">
+                        {suggestions.map((suggestion) => (
+                            <li
+                                key={suggestion.id}
+                                onClick={() => handleSupplierSelect(suggestion)}
+                                className="cursor-pointer px-4 py-2 hover:bg-blue-100"
+                            >
+                                {suggestion.nom}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+            <div className="flex flex-wrap mb-4">
+                {previouslySelectedSuppliers.map((supplier, index) => (
+                    <div key={index} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full m-1 flex items-center">
+                        {supplier}
+                    </div>
+                ))}
+                {selectedSuppliers.map((supplier) => (
+                    <div key={supplier.id} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full m-1 flex items-center">
+                        {supplier.name}
+                        <button
+                            onClick={() => handleSupplierRemove(supplier.id)}
+                            className="ml-2"
+                        >
+                            <FaXmark color='red'/>
+                        </button>
                     </div>
                 ))}
             </div>
             <button
                 onClick={handleSubmit}
-                disabled={loading}
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"
-            >{loading ? (
-                <div role="status">
-                    <svg aria-hidden="true" className="inline w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor" />
-                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill" />
-                    </svg>
-                    <span className="sr-only">Loading...</span>
-                </div>
-            ) : (
-                'Send Request to Selected Suppliers'
-            )}</button>
+                disabled={loading || selectedSuppliers.length === 0}
+                className={(loading || selectedSuppliers.length === 0) ?
+                    "w-full bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50" :
+                    "w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"}
+            >
+                {loading ? 'Sending...' : 'Send Request to Selected Suppliers'}
+            </button>
         </Modal>
     );
 };

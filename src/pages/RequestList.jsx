@@ -12,6 +12,7 @@ import ShowArticles from '../components/ShowArticles';
 import { FiSend } from "react-icons/fi";
 import SupplierSelectionModal from '../components/SupplierSelectionModal';
 import { Link, useNavigate } from "react-router-dom";
+import { GrLinkNext, GrLinkPrevious } from "react-icons/gr";
 
 const fetchAllRequests = async (code, pageNumber, pageSize, filters, sortBy) => {
     let url = `${process.env.REACT_APP_API_ENDPOINT}/Demande?userCode=${code}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
@@ -58,15 +59,10 @@ function RequestList() {
         endDate: ''
     });
     const [sortBy, setSortBy] = useState([]);
-
-    //const [requests, setRequests] = useState([]);
-
-    const [totalRequests, setTotalRequests] = useState(0);
     const { data: requests, isLoading, refetch, error } = useQuery(
         ["requests", user.code, currentPage, itemsPerPage, filters, sortBy],
         () => fetchAllRequests(user.code, currentPage, itemsPerPage, filters, sortBy)
     );
-
     const fetchArticle = async (demandeCode) => {
         try {
             const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Demande/${demandeCode}/Articles`);
@@ -95,14 +91,17 @@ function RequestList() {
     };
 
     const handleSearchChange = (e) => {
+        setCurrentPage(1);
         setFilters(prev => ({ ...prev, searchQuery: e.target.value }));
     };
 
     const handleStatusChange = (e) => {
+        setCurrentPage(1);
         setFilters(prev => ({ ...prev, status: e.target.value }));
     };
 
     const handleDateRangeChange = (start, end) => {
+        setCurrentPage(1);
         setFilters(prev => ({ ...prev, startDate: start, endDate: end }));
     };
 
@@ -144,8 +143,6 @@ function RequestList() {
             }
         }
     }
-
-    const pageCount = Math.ceil(requests?.totalCount / itemsPerPage);
 
     const getCode = async () => {
         try {
@@ -255,16 +252,21 @@ function RequestList() {
                                         <th className="px-4 py-2 text-left bg-gray-100 border-b cursor-pointer">Code</th>
                                         <th className="px-4 py-2 text-left bg-gray-100 border-b cursor-pointer">Requestor</th>
                                         <th className="px-4 py-2 text-left bg-gray-100 border-b cursor-pointer">Requested At</th>
+                                        <th className="px-4 py-2 text-left bg-gray-100 border-b cursor-pointer">Last Modification</th>
                                         <th className="px-4 py-2 text-left bg-gray-100 border-b cursor-pointer">Status</th>
                                         <th className="px-4 py-2 text-left bg-gray-100 border-b">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody >
+                                    {requests?.totalCount === 0 && 
+                                        <td colSpan={5} className="p-5 whitespace-nowrap text-xl text-center leading-6 font-medium text-gray-900 border-b">No requests !</td>
+                                    } 
                                     {requests?.items.map((request) => (
                                         <tr key={request.code}>
                                             <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 border-b">{request.code}</td>
                                             <td className="px-4 py-2 border-b">{request.demandeur.firstName} {request.demandeur.lastName}</td>
                                             <td className="px-4 py-2 border-b">{new Date(request.openedAt).toLocaleString('fr-FR')}</td>
+                                            <td className="px-4 py-2 border-b">{request.lastModification && new Date(request.lastModification).toLocaleString('fr-FR')}</td>
                                             <td className="px-4 py-2 border-b">
                                                 {
                                                     request.status === 0 ? <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">Created</span> :
@@ -312,7 +314,7 @@ function RequestList() {
                                                             <FiSend size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                         </button>
                                                     )}
-                                                    {user.roles.includes('P') && (request.status === 5 || request.status === 2 || request.status === 1) && (
+                                                    {user.roles.includes('P') && (request.status !== 0) && (
                                                         <button
                                                             onClick={() => navigate(`/offers/${request.code}`)}
                                                             title="Offers"
@@ -320,7 +322,7 @@ function RequestList() {
                                                         >
                                                             <FaFile size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                         </button>)}
-                                                    {((user.roles.includes('V')) || (user.roles.includes('P') && (request?.status === 4 || request?.status === 1))) &&
+                                                    {((user.roles.includes('V') && (request?.status === 6 || request?.status === 7 ||request?.status === 8 )) || (user.roles.includes('P') && (request?.status === 4 || request?.status === 1))) &&
                                                         <button
                                                             onClick={() => navigate(`/offers-validation/${request.code}`)}
                                                             className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
@@ -339,27 +341,27 @@ function RequestList() {
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+                                    className={`py-2 px-4 rounded-md ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}
                                 >
-                                    {'<'}
+                                    <GrLinkPrevious />
                                 </button>
                                 <span>
                                     Page{' '}
                                     <strong>
-                                        {currentPage} of {pageCount}
+                                        {currentPage} of {requests?.totalPages}
                                     </strong>{' '}
                                 </span>
                                 <div>
                                     <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === pageCount}
-                                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+                                        onClick={() =>handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === requests?.totalPages || requests?.totalCount === 0}
+                                        className={`py-2 px-4 rounded-md ${currentPage === requests?.totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}
                                     >
-                                        {'>'}
+                                        <GrLinkNext />
                                     </button>
                                     <select
                                         value={itemsPerPage}
-                                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                        onChange={(e) => {setCurrentPage(1);setItemsPerPage(Number(e.target.value))}}
                                         className="p-2 border border-gray-300 rounded ms-5"
                                     >
                                         {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -381,7 +383,7 @@ function RequestList() {
                     />
                     <RequestModal
                         isOpen={isRequestModalOpen}
-                        onRequestClose={() => setIsRequestModalOpen(false)}
+                        onRequestClose={() => { refetch(); setIsRequestModalOpen(false) }}
                         code={code}
                         request={selectedRequest}
                         articles={articles}
@@ -389,7 +391,7 @@ function RequestList() {
                     />
                     <SupplierSelectionModal
                         isOpen={isSupplierSelectionModalOpen}
-                        onRequestClose={() => setIsSupplierSelectionModalOpen(false)}
+                        onRequestClose={() => { refetch(); setIsSupplierSelectionModalOpen(false) }}
                         request={selectedRequest}
                     />
                 </div>

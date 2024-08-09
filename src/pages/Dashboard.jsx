@@ -9,6 +9,7 @@ import { MdBlock } from "react-icons/md";
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import UserPasswordModal from '../components/UserPasswordModal';
+import { GrLinkNext, GrLinkPrevious } from 'react-icons/gr';
 
 const fetchAllUsers = async (token, pageNumber, pageSize, searchQuery, role, department) => {
   let url = `${process.env.REACT_APP_API_ENDPOINT}/Users?pageNumber=${pageNumber}&pageSize=${pageSize}`;
@@ -38,7 +39,7 @@ const fetchAllUsers = async (token, pageNumber, pageSize, searchQuery, role, dep
   return res.json();
 };
 
-const departments = ['All', 'IT', 'RH', 'MANT', 'DE']; // Define your departments here
+const departments = ['All', 'IT', 'RH', 'MANT', 'FIN', 'CFO', 'COO']; // Define your departments here
 
 function Dashboard() {
   const auth = useAuth();
@@ -54,13 +55,13 @@ function Dashboard() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const openAddUserModal = () => setIsAddUserModalOpen(true);
-  const closeAddUserModal = () => setIsAddUserModalOpen(false);
+  const closeAddUserModal = () => {refetch();setIsAddUserModalOpen(false)};
 
   const openUpdateUserModal = (user) => {
     setIsUpdateUserModalOpen(true);
     setUserToUpdate(user);
   };
-  const closeUpdateUserModal = () => setIsUpdateUserModalOpen(false);
+  const closeUpdateUserModal = () => {refetch();setIsUpdateUserModalOpen(false)};
 
   const openUpdateUserPasswordModal = (user) => {
     setIsUpdateUserPasswordModalOpen(true);
@@ -75,9 +76,7 @@ function Dashboard() {
       enabled: !!auth.token,
     }
   );
-  const totalPages = Math.ceil(users?.totalCount / itemsPerPage) || 1;
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
   useEffect(() => {
     refetch();
     setCurrentPage(1);
@@ -164,7 +163,7 @@ function Dashboard() {
                       onChange={(e) => setSelectedRole(e.target.value)}
                       className="block w-48 h-11 px-4 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-full placeholder-gray-400 focus:outline-none"
                     >
-                      <option value={'All'}>All</option>
+                      <option value={'All'}>All Roles</option>
                       <option value={'A'}>Admin</option>
                       <option value={'P'}>Purchaser</option>
                       <option value={'D'}>Requesteur</option>
@@ -243,23 +242,23 @@ function Dashboard() {
                     <button
                       onClick={() => paginate(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className={`py-2 px-4 rounded-md text-sm font-medium ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}>
-                      Previous
+                      className={`py-2 px-4 rounded-md ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}>
+                      <GrLinkPrevious />
                     </button>
                     <div className="text-sm font-medium text-gray-700">
-                      Page {currentPage} of {totalPages}
+                      Page {currentPage} of {users?.totalPages}
                     </div>
                     <div>
                       <button
                         onClick={() => paginate(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`py-2 px-4 rounded-md text-sm font-medium ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}>
-                        Next
+                        disabled={currentPage === users?.totalPages}
+                        className={`py-2 px-4 rounded-md ${currentPage === users?.totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}>
+                        <GrLinkNext />
                       </button>
                       <select
                         value={itemsPerPage}
-                        onChange={(e) => {setCurrentPage(1);setItemsPerPage(Number(e.target.value))}}
-                        className="p-2 border border-gray-300 rounded"
+                        onChange={(e) => { setCurrentPage(1); setItemsPerPage(Number(e.target.value)) }}
+                        className="ms-5 p-2 border border-gray-300 rounded"
                       >
                         {[10, 20, 30, 40, 50].map((pageSize) => (
                           <option key={pageSize} value={pageSize}>
