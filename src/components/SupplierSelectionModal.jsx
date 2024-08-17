@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/authContext';
 import Swal from 'sweetalert2';
 import { FaXmark } from "react-icons/fa6";
+import { IoReload } from "react-icons/io5";
 
 Modal.setAppElement('#root');
 
@@ -13,6 +14,7 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
     const [selectedSuppliers, setSelectedSuppliers] = useState([]);
     const [previouslySelectedSuppliers, setPreviouslySelectedSuppliers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [loadingResend, setLoadingResend] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -114,6 +116,47 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
         }
     };
 
+    const handleReSend = async () => {
+        const requestCode = request?.code;
+        const userCode = user?.code;
+        const previouslySelectedSupplierIds = new Set(suppliers.filter(supplier => previouslySelectedSuppliers.includes(supplier.nom)).map(supplier => supplier.id));
+        const newSupplierIds = selectedSuppliers.filter(supplier => !previouslySelectedSupplierIds.has(supplier.id)).map(supplier => supplier.id);
+        var merged = new Set([...previouslySelectedSupplierIds, ...newSupplierIds])
+        try {
+            setLoadingResend(true);
+            const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Suppliers/send-to-suppliers`, {
+                userCode,
+                requestCode,
+                supplierIds: Array.from(merged)
+            });
+            if (response.status === 200) {
+                Swal.fire({
+                    title: "Success!",
+                    text: "Request sent to suppliers successfully!",
+                    icon: 'success',
+                    timer: 2000
+                }).then(closeModal());
+            } else {
+                Swal.fire({
+                    title: "Error!",
+                    text: "Failed to send request to suppliers!",
+                    icon: 'error',
+                    timer: 2000
+                });
+            }
+            setLoadingResend(false);
+        } catch (error) {
+            Swal.fire({
+                title: "Error!",
+                text: "An error occurred!",
+                icon: 'error',
+                timer: 2000
+            });
+            console.error('Error sending request to suppliers:', error);
+            setLoadingResend(false);
+        }
+    }
+
     const closeModal = () => {
         setSuppliers([]);
         setSelectedSuppliers([]);
@@ -152,7 +195,7 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
                     </ul>
                 )}
             </div>
-            <div className="flex flex-wrap mb-4">
+            <div className="flex flex-wrap mb-4 max-h-96 overflow-y-auto">
                 {previouslySelectedSuppliers.map((supplier, index) => (
                     <div key={index} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full m-1 flex items-center">
                         {supplier}
@@ -165,20 +208,32 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
                             onClick={() => handleSupplierRemove(supplier.id)}
                             className="ml-2"
                         >
-                            <FaXmark color='red'/>
+                            <FaXmark color='red' />
                         </button>
                     </div>
                 ))}
             </div>
-            <button
-                onClick={handleSubmit}
-                disabled={loading || selectedSuppliers.length === 0}
-                className={(loading || selectedSuppliers.length === 0) ?
-                    "w-full bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50" :
-                    "w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"}
-            >
-                {loading ? 'Sending...' : 'Send Request to Selected Suppliers'}
-            </button>
+            <div className='flex'>
+                <button
+                    onClick={handleSubmit}
+                    disabled={loading || selectedSuppliers.length === 0}
+                    className={(loading || selectedSuppliers.length === 0) ?
+                        "w-full bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50" :
+                        "w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"}
+                >
+                    {loading ? 'Sending...' : 'Send Request to New Selected Suppliers'}
+                </button>
+                <button
+                    disabled={loadingResend || previouslySelectedSuppliers.length === 0}
+                    className={(loadingResend || previouslySelectedSuppliers.length === 0) ?
+                        "flex items-center justify-center ml-5 w-full bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50" :
+                        "flex items-center justify-center ml-5 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"}
+                    onClick={handleReSend}
+                >
+                    <IoReload size={24} />
+                    <span className='ml-2'>Resend + New Selected Suppliters</span>
+                </button>
+            </div>
         </Modal>
     );
 };

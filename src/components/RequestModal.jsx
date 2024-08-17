@@ -24,7 +24,7 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
 
     useEffect(() => {
         if (mode === 'update' && articles) {
-            const formattedArticles = articles.map((item) => ({
+            const formattedArticles = articles.filter(item=> item.name != "Delivery Fee").map((item) => ({
                 localId: Date.now() + Math.random(), // Generate a unique local ID
                 id: item.id || null,
                 name: item.name,
@@ -90,7 +90,6 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
             demandeurId: user.id,
             articles: newArray
         };
-
         try {
             setLoading(true);
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Demande`, data);
@@ -299,7 +298,7 @@ const RequestModal = ({ isOpen, onRequestClose, code, request, articles, mode, u
                                     <li
                                         key={index}
                                         className="px-4 py-2 cursor-pointer hover:bg-gray-200"
-                                        onClick={() => { setDestination(suggestion.familleDeProduit); setSuggestions([]); }}
+                                        onClick={() => { setDestination(suggestion.destination); setSuggestions([]); }}
                                     >
                                         <div className="font-semibold">{suggestion.destination}</div>
                                     </li>

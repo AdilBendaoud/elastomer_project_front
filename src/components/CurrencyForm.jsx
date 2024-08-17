@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useAuth } from '../context/authContext';
 import swal from 'sweetalert';
 import axios from 'axios';
 

@@ -105,11 +105,13 @@ const OffersPage = () => {
                 const offer = supplier.offer.find(o => o.demandeArticleId === article.id);
                 if (offer) {
                     acc[`${supplier.nom}-unitPrice`] = offer.unitPrice;
-                    acc[`${supplier.nom}-totalPrice`] = offer.unitPrice * article.quantity;
+                    acc[`${supplier.nom}-discount`] = offer.discount;
+                    acc[`${supplier.nom}-totalPrice`] = offer.discount !== null ? (offer.unitPrice - offer.unitPrice*(offer.discount/100)) * article.quantity : '';
                     acc[`${supplier.nom}-delay`] = offer.delay;
                 } else {
                     acc[`${supplier.nom}-unitPrice`] = '';
                     acc[`${supplier.nom}-totalPrice`] = '';
+                    acc[`${supplier.nom}-discount`] = '';
                     acc[`${supplier.nom}-delay`] = '';
                 }
                 return acc;
@@ -124,13 +126,15 @@ const OffersPage = () => {
             const originalTotal = rows.reduce((sum, row) => {
                 const quantity = parseInt(row.quantity, 10) || 0;
                 const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
-                return sum + (quantity * unitPrice);
+                const unitPriceAfterDiscount =  row[`${supplier.nom}-discount`] !== "" ? (unitPrice - unitPrice*(parseFloat(row[`${supplier.nom}-discount`])/100)) : unitPrice
+                return sum + (quantity * unitPriceAfterDiscount);
             }, 0);
             const total = rows.reduce((sum, row) => {
                 const quantity = parseInt(row.quantity, 10) || 0;
                 const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
                 const unitPriceInEUR = convertPriceToEUR(unitPrice, supplier.currency, exchangeRates);
-                return sum + (quantity * unitPriceInEUR);
+                const unitPriceAfterDiscount =  row[`${supplier.nom}-discount`] !== "" ? (unitPriceInEUR - unitPriceInEUR*(parseFloat(row[`${supplier.nom}-discount`])/100)) : unitPriceInEUR
+                return sum + (quantity * unitPriceAfterDiscount);
             }, 0);
             return { id: supplier.id, total, originalTotal };
         });
@@ -143,19 +147,17 @@ const OffersPage = () => {
         fetchRequest();
     }, [requestCode, fetchArticles, fetchSuppliers, fetchRequest]);
 
-    console.log(totals);
-
     const submitData = async (showMessages = true) => {
         try {
             let transformedData = [];
 
             suppliers.forEach(supplier => {
                 const supplierOffers = supplier.offer.map(offer => {
-                    const { unitPrice, delay, currency } = offer;
-
+                    const { unitPrice, discount ,delay } = offer;
                     if (unitPrice !== '') {
                         return {
                             demandeArticleId: offer.demandeArticleId,
+                            discount: (discount !== "" && !isNaN(discount)) ? parseFloat(discount) : 0,
                             devise: supplier.currency,
                             unitPrice: parseFloat(unitPrice),
                             delay: delay
@@ -171,7 +173,7 @@ const OffersPage = () => {
                     });
                 }
             });
-
+            
             setLoadingButton(true);
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Devis`, {
                 "userCode": user.code,
@@ -201,7 +203,7 @@ const OffersPage = () => {
             USD: response.data.usdToEur,
             EUR: 1.0,
             MAD: response.data.madToEur,
-            GBP : response.data.gbpToEur
+            GBP: response.data.gbpToEur
         };
     };
 
@@ -214,11 +216,11 @@ const OffersPage = () => {
             const updatedOffers = updatedRows.map(row => {
                 return {
                     demandeArticleId: row.id,
-                    unitPrice: row[`${supplier.nom}-unitPrice`],
+                    unitPrice: !isNaN(row[`${supplier.nom}-unitPrice`]) ? row[`${supplier.nom}-unitPrice`] : '',
+                    discount:  (!isNaN(row[`${supplier.nom}-discount`]) && parseFloat(row[`${supplier.nom}-discount`]) < 100)  ? row[`${supplier.nom}-discount`] : '',
                     delay: row[`${supplier.nom}-delay`]
                 };
-            }).filter(offer => offer.demandeArticleId);
-
+            }).filter(offer => offer.demandeArticleId); 
             return {
                 ...supplier,
                 offer: updatedOffers
@@ -230,7 +232,7 @@ const OffersPage = () => {
 
     const calculateBestSupplier = async (rows, suppliers) => {
         let bestSupplier = null;
-        const exchangeRates = await getExchangeRates(); //await
+        const exchangeRates = await getExchangeRates();
 
         suppliers.forEach(supplier => {
             let hasAllItems = true;
@@ -302,6 +304,7 @@ const OffersPage = () => {
                 return;
             }
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Devis/sendForValidation`, {
+                "userCode": user.code,
                 "demandeCode": requestCode,
                 "supplierId": selectedSupplierId
             });
@@ -367,6 +370,7 @@ const OffersPage = () => {
             name: supplier.nom,
             children: [
                 { key: `${supplier.nom}-unitPrice`, name: 'Unit Price', renderEditCell: textEditor },
+                { key: `${supplier.nom}-discount`, name: 'Discount', renderEditCell: textEditor },
                 { key: `${supplier.nom}-totalPrice`, name: 'Total Price' },
                 { key: `${supplier.nom}-delay`, name: 'Delay', renderEditCell: textEditor },
             ]
@@ -385,6 +389,7 @@ const OffersPage = () => {
             name: supplier.nom,
             children: [
                 { key: `${supplier.nom}-unitPrice`, name: 'Unit Price', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
+                { key: `${supplier.nom}-discount`, name: 'Discount', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium"},
                 { key: `${supplier.nom}-totalPrice`, name: 'Total Price', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
                 { key: `${supplier.nom}-delay`, name: 'Delay', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
             ]
@@ -433,8 +438,8 @@ const OffersPage = () => {
                                         <div
                                             key={supplier.id}
                                             className={bestSupplier?.id === supplier.id ?
-                                                "flex max-w-xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md bg-green-500" :
-                                                "flex max-w-xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"}
+                                                "flex max-w-2xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md bg-green-500" :
+                                                "flex max-w-2xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"}
                                         >
                                             <input
                                                 type="radio"
@@ -461,7 +466,7 @@ const OffersPage = () => {
                                                 </select>
                                             </div>
                                             {(supplier?.offer?.length === 0 || supplier?.offer?.[0]?.devise === 'EUR') ?
-                                                <div className="text-sm">
+                                                <div className="text-md- font-bold">
                                                     Total : EUR {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
                                                 </div>
                                                 :
@@ -469,7 +474,7 @@ const OffersPage = () => {
                                                     <div className="text-sm">
                                                         Total : {supplier?.offer?.[0]?.devise} {totals?.find((elm) => elm.id === supplier.id)?.originalTotal?.toFixed(2) || 'N/A'}
                                                     </div>
-                                                    <div className="text-sm">
+                                                    <div className="text-md font-bold">
                                                         Total : EUR {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
                                                     </div>
                                                 </>
@@ -478,15 +483,18 @@ const OffersPage = () => {
                                     ))}
                                 </div>
                             </div>
-                            <div className='flex items-center justify-center'>
-                                <button
-                                    disabled={loadingValidation}
-                                    onClick={handleSubmitSelectedOffer}
-                                    className='text-white bg-green-500 border border-green-600 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5'
-                                >
-                                    {loadingValidation ? 'Sending...' : 'Send To Validation'}
-                                </button>
-                            </div>
+                            {
+                                selectedSupplierId !== null && 
+                                <div className='flex items-center justify-center'>
+                                    <button
+                                        disabled={loadingValidation}
+                                        onClick={handleSubmitSelectedOffer}
+                                        className='text-white bg-green-500 border border-green-600 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5'
+                                    >
+                                        {loadingValidation ? 'Sending...' : 'Send To Validation'}
+                                    </button>
+                                </div>
+                            }
                         </>
                     }
                     {((request?.status !== 2 && request?.status !== 5 && request?.status !== 0) && user.roles.includes('P')) && suppliers?.length > 0 && (
@@ -496,14 +504,16 @@ const OffersPage = () => {
                                 {suppliers.map((supplier) => (
                                     <div
                                         key={supplier.id}
-                                        className="flex max-w-md items-center justify-around space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"
+                                        className={bestSupplier?.id === supplier.id ?
+                                            "flex max-w-2xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md bg-green-500" :
+                                            "flex max-w-2xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"}
                                     >
                                         <label className="text-lg font-semibold flex-1">
                                             {supplier.nom}
                                         </label>
                                         {supplier?.offer?.[0]?.devise === 'EUR' ?
-                                            <div className="text-sm">
-                                                Total : EUR {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
+                                            <div className="text-md font-bold">
+                                                Total : € {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
                                             </div>
                                             :
                                             <>
@@ -513,8 +523,8 @@ const OffersPage = () => {
                                                             <div className="text-sm">
                                                                 Total : {supplier?.offer?.[0]?.devise} {totals?.find((elm) => elm.id === supplier.id)?.originalTotal?.toFixed(2) || 'N/A'}
                                                             </div>
-                                                            <div className="text-sm">
-                                                                Total : EUR {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
+                                                            <div className="text-md font-bold">
+                                                                Total : € {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
                                                             </div>
                                                         </>
                                                     )

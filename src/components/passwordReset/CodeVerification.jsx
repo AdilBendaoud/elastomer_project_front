@@ -38,7 +38,7 @@ function CodeVerification({email, vesibilityFunction, code, setCode}) {
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
                 Enter the code in your e-mail
             </h1>
-            <form className="space-y-4 md:space-y-6" onSubmit={handleSubmitEvent}>
+            <form autoComplete='false' className="space-y-4 md:space-y-6" onSubmit={handleSubmitEvent}>
                 <div>
                     <label htmlFor="code" className="block mb-2 text-sm font-medium text-gray-900">Your Code</label>
                     <input

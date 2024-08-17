@@ -14,13 +14,13 @@ import { useEffect } from 'react';
 import RequestList from './pages/RequestList';
 import OffersPage from './pages/OffersPage';
 import ValidationPage from './pages/ValidationPage';
+import BudgetTable from './pages/BudgetTable';
 
 function App() {
   const { isAuthenticated, mustChangePassword, isBlocked, user } = useAuth();
   useEffect(() => console.log({ isAuthenticated, mustChangePassword, isBlocked, user }), [])
   return (
     <Routes>
-      {/* unauthorized route */}
       {!isAuthenticated && (
         <>
           <Route path="/login" element={<Login />} />
@@ -47,11 +47,19 @@ function App() {
         <>
           <Route element={<ProtectedRoute />}>
             <Route path="/change-password" element={<Navigate to="/" />} />
+            <Route path='/forgotpassword' element={<ForgotPass />} />
             <Route path="/login" element={<Navigate to="/" />} />
             <Route path='/' element={<Layout />}>
-              { !user.roles.includes('A') ? (
+              {!user.roles.includes('A') ? (
                 <>
-                  {(user.roles.includes('V') || user.roles.includes('P')) && <Route path='/offers-validation/:requestCode' element={<ValidationPage />} />}
+                  {(user.roles.includes('V') || user.roles.includes('P')) &&
+                    (
+                      <>
+                        <Route path='/budget' element={<BudgetTable />} />
+                        <Route path='/offers-validation/:requestCode' element={<ValidationPage />} />
+                      </>
+                    )
+                  }
                   <Route path='/' element={<RequestList />} />
                   <Route path='/offers/:requestCode' element={<OffersPage />} />
                 </>) : (

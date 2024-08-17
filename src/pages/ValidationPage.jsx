@@ -25,7 +25,7 @@ function ValidationPage() {
     const [CFOComment, setCFOComment] = useState('');
     const [error, setError] = useState('');
     const [comment, setComment] = useState('');
-    const [total, setTotal] = useState(0);
+    const [totals, setTotals] = useState([]);
 
     const getExchangeRates = async () => {
         const response = await axios.get(`${process.env.REACT_APP_API_ENDPOINT}/Settings/get-currency-settings`);
@@ -33,7 +33,7 @@ function ValidationPage() {
             USD: response.data.usdToEur,
             EUR: 1.0,
             MAD: response.data.madToEur,
-            GBP : response.data.gbpToEur
+            GBP: response.data.gbpToEur
         };
     };
 
@@ -58,26 +58,26 @@ function ValidationPage() {
         }
     }, [requestCode]);
 
-    const calculateTotals = async (supplier, myArticles) => {
+    const calculateTotals = async (rows, suppliers) => {
         const exchangeRates = await getExchangeRates();
-        let totalInEur = 0;
-        let originalTotal = 0;
-        supplier.offer?.map((item) => {
-            const article = myArticles.find(({ id }) => id === item.demandeArticleId);
-            const quantity = parseInt(article?.quantity) || 0;
-            const unitPrice = parseFloat(item.unitPrice) || 0;
-            const unitPriceInEUR = convertPriceToEUR(unitPrice, item.devise, exchangeRates);
-            totalInEur += (quantity * unitPriceInEUR);
-            originalTotal += (quantity * unitPrice);
+        const data = suppliers.map(supplier => {
+            const originalTotal = rows.reduce((sum, row) => {
+                const quantity = parseInt(row.quantity, 10) || 0;
+                const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
+                const unitPriceAfterDiscount = row[`${supplier.nom}-discount`] !== "" ? (unitPrice - unitPrice * (parseFloat(row[`${supplier.nom}-discount`]) / 100)) : unitPrice
+                return sum + (quantity * unitPriceAfterDiscount);
+            }, 0);
+            const total = rows.reduce((sum, row) => {
+                const quantity = parseInt(row.quantity, 10) || 0;
+                const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
+                const unitPriceInEUR = convertPriceToEUR(unitPrice, supplier.offer.length > 0 ? supplier?.offer[0].devise : 'EUR', exchangeRates);
+                const unitPriceAfterDiscount = row[`${supplier.nom}-discount`] !== "" ? (unitPriceInEUR - unitPriceInEUR * (parseFloat(row[`${supplier.nom}-discount`]) / 100)) : unitPriceInEUR
+                return sum + (quantity * unitPriceAfterDiscount);
+            }, 0);
+            return { id: supplier.id, total, originalTotal };
         });
-        console.log({
-            "originalTotal": originalTotal?.toFixed(2),
-            "totalInEur": totalInEur?.toFixed(2)
-        })
-        setTotal({
-            "originalTotal": originalTotal?.toFixed(2),
-            "totalInEur": totalInEur?.toFixed(2)
-        });
+        //console.log(data);
+        setTotals(data);
     };
 
     const fetchSuppliers = useCallback(async () => {
@@ -98,7 +98,6 @@ function ValidationPage() {
                 setSuppliers(data);
                 const selected = data.find(s => s.isSelectedForValidation);
                 setSelectedSupplier(selected)
-                calculateTotals(selected, dataArticles);
                 setError('');
                 setLoading(false);
             } catch (error) {
@@ -141,6 +140,10 @@ function ValidationPage() {
         fetchSuppliers();
     }, [requestCode, fetchArticles, fetchSuppliers, fetchRequest]);
 
+    useEffect(() => {
+        calculateTotals(rows, suppliers)
+    }, [articles, suppliers])
+
     const staticColumnsPurchassor = [
         {
             key: 'Article', name: `${requestCode}`, children: [
@@ -153,6 +156,7 @@ function ValidationPage() {
             name: selectedSupplier?.nom,
             children: [
                 { key: 'unitPrice', name: 'Unit Price' },
+                { key: 'discount', name: 'Discount' },
                 { key: 'totalPrice', name: 'Total Price' },
                 { key: 'delay', name: 'Delay', name: 'Delay' },
             ]
@@ -173,6 +177,7 @@ function ValidationPage() {
             name: selectedSupplier?.nom,
             children: [
                 { key: 'unitPrice', name: 'Unit Price' },
+                { key: 'discount', name: 'Discount' },
                 { key: 'totalPrice', name: 'Total Price' },
                 { key: 'delay', name: 'Delay', name: 'Delay' },
             ]
@@ -193,6 +198,7 @@ function ValidationPage() {
             name: suppliers.nom,
             children: [
                 { key: `${suppliers.nom}-unitPrice`, name: 'Unit Price', cellClass: suppliers.isSelectedForValidation && "bg-green-300 font-medium" },
+                { key: `${suppliers.nom}-discount`, name: 'Discount', cellClass: suppliers.isSelectedForValidation && "bg-green-300 font-medium" },
                 { key: `${suppliers.nom}-totalPrice`, name: 'Total Price', cellClass: suppliers.isSelectedForValidation && "bg-green-300 font-medium" },
                 { key: `${suppliers.nom}-delay`, name: 'Delay', cellClass: suppliers.isSelectedForValidation && "bg-green-300 font-medium" },
             ]
@@ -203,9 +209,10 @@ function ValidationPage() {
         const offer = selectedSupplier?.offer?.find(o => o.demandeArticleId === article.id);
         const row = {
             ...article,
-            ["unitPrice"]: offer ? offer.unitPrice : '',
-            ["totalPrice"]: offer ? offer.unitPrice * article.quantity : '',
-            ["delay"]: offer ? offer.delay : ''
+            unitPrice: offer ? offer.unitPrice : '',
+            discount: offer ? offer.discount : '',
+            totalPrice: offer ? offer.unitPrice * article.quantity : '',
+            delay: offer ? offer.delay : ''
         };
         return row;
     });
@@ -217,11 +224,13 @@ function ValidationPage() {
                 const offer = supplier.offer.find(o => o.demandeArticleId === article.id);
                 if (offer) {
                     acc[`${supplier.nom}-unitPrice`] = offer.unitPrice;
-                    acc[`${supplier.nom}-totalPrice`] = offer.unitPrice * article.quantity;
+                    acc[`${supplier.nom}-discount`] = offer.discount;
+                    acc[`${supplier.nom}-totalPrice`] = offer.discount !== null ? (offer.unitPrice - offer.unitPrice * (offer.discount / 100)) * article.quantity : '';
                     acc[`${supplier.nom}-delay`] = offer.delay;
                 } else {
                     acc[`${supplier.nom}-unitPrice`] = '';
                     acc[`${supplier.nom}-totalPrice`] = '';
+                    acc[`${supplier.nom}-discount`] = '';
                     acc[`${supplier.nom}-delay`] = '';
                 }
                 return acc;
@@ -229,6 +238,7 @@ function ValidationPage() {
         };
         return row;
     });
+
     const validateRequest = async (request) => {
         const confirmed = await Swal.fire({
             title: "Validate Request",
@@ -263,6 +273,7 @@ function ValidationPage() {
             }
         }
     }
+
     const rejectRequest = async (request) => {
         const confirmed = await Swal.fire({
             title: "Reject Request",
@@ -297,23 +308,6 @@ function ValidationPage() {
             }
         }
     }
-
-    const handleFill = ({ columnKey, sourceRow, targetRows }) => {
-        if (columnKey !== 'purchaseOrder') return;
-        const updatedPurchaseOrders = { ...purchaseOrders };
-        targetRows.forEach(row => {
-            updatedPurchaseOrders[row.id] = sourceRow.purchaseOrder;
-        });
-        setPurchaseOrders(updatedPurchaseOrders);
-        const updatedArticles = [...articles];
-        targetRows.forEach(row => {
-            const articleIndex = articles.findIndex(article => article.id === row.id);
-            if (articleIndex !== -1) {
-                updatedArticles[articleIndex].purchaseOrder = sourceRow.purchaseOrder;
-            }
-        });
-        setArticles(updatedArticles);
-    };
 
     const submitData = async (showMessages = true) => {
         var data = articles.map(article => ({ "id": article.id, "purchaseOrder": article.purchaseOrder }));
@@ -497,9 +491,7 @@ function ValidationPage() {
                                 staticColumnsValidator
                     }
 
-                    rows={
-                        ((user.roles.includes('P') && request?.status === 4) || (user.roles.includes('P') && request?.status === 1)) ? rowsShort :
-                            rows}
+                    rows={(user.roles.includes('P') && (request?.status === 4 || request?.status === 1)) ? rowsShort : rows}
 
                     className="rdg-light text-center mb-4"
                     onRowsChange={(updatedRows) => {
@@ -512,26 +504,69 @@ function ValidationPage() {
                         });
                         setArticles(newArticles);
                     }}
-                    fillHandle={{ onFill: handleFill }}
                 />
+                {request?.status === 7 || request?.status === 6 || request?.status === 8 ?
+                    <div className="p-4 bg-white rounded-lg">
+                        <h2 className="text-xl font-semibold mb-4">Supplier Totals</h2>
+                        <div className="space-y-2">
+                            {suppliers.map((supplier) => {
+                                <div
+                                    key={supplier.id}
+                                    className="flex max-w-2xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md bg-blue-300"
+                                >
+                                    <span className="text-lg font-semibold flex-1">
+                                        {supplier.nom}
+                                    </span>
+                                    {(supplier?.offer?.length === 0 || supplier?.offer?.[0]?.devise === 'EUR') ?
+                                        <div className="text-md- font-bold">
+                                            Total : € {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
+                                        </div>
+                                        :
+                                        <>
+                                            <div className="text-sm">
+                                                Total : {supplier?.offer?.[0]?.devise} {totals?.find((elm) => elm.id === supplier.id)?.originalTotal?.toFixed(2) || 'N/A'}
+                                            </div>
+                                            <div className="text-md font-bold">
+                                                Total : € {totals?.find((elm) => elm.id === supplier.id)?.total?.toFixed(2) || 'N/A'}
+                                            </div>
+                                        </>
+                                    }
+                                </div>
+                            }
+                            )}
+                        </div>
+                    </div>
+                    :
+                    <div className="p-4 bg-white rounded-lg">
+                        <h2 className="text-xl font-semibold mb-4">Supplier Total</h2>
+                        <div className="space-y-2">
+                                <div
+                                    className="flex max-w-2xl items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md"
+                                >
+                                    <span className="text-lg font-semibold flex-1">
+                                        {selectedSupplier.nom}
+                                    </span>
+                                    {(selectedSupplier?.offer?.length === 0 || selectedSupplier?.offer?.[0]?.devise === 'EUR') ?
+                                        <div className="text-md- font-bold">
+                                            Total : € {totals?.find((elm) => elm.id === selectedSupplier.id)?.total?.toFixed(2) || 'N/A'}
+                                        </div>
+                                        :
+                                        <>
+                                            <div className="text-sm">
+                                                Total : {selectedSupplier?.offer?.[0]?.devise} {totals?.find((elm) => elm.id === selectedSupplier.id)?.originalTotal?.toFixed(2) || 'N/A'}
+                                            </div>
+                                            <div className="text-md font-bold">
+                                                Total : € {totals?.find((elm) => elm.id === selectedSupplier.id)?.total?.toFixed(2) || 'N/A'}
+                                            </div>
+                                        </>
+                                    }
+                                </div>
+                        </div>
+                    </div>
+                }
 
-                <div className="flex max-w-xl mb-5 items-center space-x-4 p-3 rounded-lg border border-gray-300 shadow-md">
-                    {
-                        suppliers.find(s => s.isSelectedForValidation)?.offer?.[0]?.devise !== "EUR" ?
-                            <>
-                                <div className="text-lg font-semibold flex-1">
-                                    Original Total : {suppliers.find(s => s.isSelectedForValidation)?.offer?.[0]?.devise} {total.originalTotal}
-                                </div>
-                                <div className="text-lg font-semibold flex-1">
-                                    Total In EUR: € {total.totalInEur}
-                                </div>
-                            </> :
-                            <div className="text-lg font-semibold flex-1 text-center">
-                                Total : € {total.totalInEur}
-                            </div>
-                    }
-                </div>
-                {(request?.status !== 1 && user?.roles.includes("V")) &&
+                {
+                    (request?.status !== 1 && user?.roles.includes("V")) &&
                     <div className="mt-4 w-3/5">
                         <label className="font-semibold block mb-2">Add/Edit Comment:</label>
                         <textarea
@@ -546,9 +581,9 @@ function ValidationPage() {
                                 onClick={addComment}
                                 type="button"
                                 className={
-                                    comment.trim() === '' ? 
-                                    "self-end  bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 mb-4" :
-                                    "self-end text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-4"
+                                    comment.trim() === '' ?
+                                        "self-end  bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 mb-4" :
+                                        "self-end text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-4"
                                 }
                                 disabled={loadingButton || comment.trim() === ''}
                             >
@@ -571,8 +606,9 @@ function ValidationPage() {
                         <p>{CFOComment !== null ? CFOComment : 'No comment yet .'}</p>
                     </div>
                 </div>
-                {((user?.departement === 'COO' && (request?.status === 8 || request?.status === 6))
-                    || (user?.departement === 'CFO' && (request?.status === 7 || request?.status === 6))) && (
+                {
+                    ((user?.departement === 'COO' && (request?.status === 8 || request?.status === 6))
+                        || (user?.departement === 'CFO' && (request?.status === 7 || request?.status === 6))) && (
                         <div className='bg-white flex items-center justify-center'>
                             <button
                                 onClick={() => validateRequest(request)}
@@ -607,9 +643,10 @@ function ValidationPage() {
                                 )}
                             </button>
                         </div>
-                    )}
-            </div>
-        </div>
+                    )
+                }
+            </div >
+        </div >
     )
 }
 

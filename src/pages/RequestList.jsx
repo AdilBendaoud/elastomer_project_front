@@ -6,13 +6,14 @@ import axios from 'axios';
 import swal from 'sweetalert';
 import Swal from 'sweetalert2';
 import { useQuery } from 'react-query';
-import { FaEye, FaFile } from 'react-icons/fa';
+import { FaEye, FaFile, FaSearch } from 'react-icons/fa';
 import { FaCircleXmark, FaFileCircleCheck } from "react-icons/fa6";
 import ShowArticles from '../components/ShowArticles';
 import { FiSend } from "react-icons/fi";
 import SupplierSelectionModal from '../components/SupplierSelectionModal';
 import { Link, useNavigate } from "react-router-dom";
 import { GrLinkNext, GrLinkPrevious } from "react-icons/gr";
+import CheapestOffersModal from '../components/CheapestOffersModal';
 
 const fetchAllRequests = async (code, pageNumber, pageSize, filters, sortBy) => {
     let url = `${process.env.REACT_APP_API_ENDPOINT}/Demande?userCode=${code}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
@@ -46,6 +47,7 @@ function RequestList() {
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
     const [isRequestDetailsModalOpen, setIsRequestDetailsModalOpen] = useState(false);
     const [isSupplierSelectionModalOpen, setIsSupplierSelectionModalOpen] = useState(false);
+    const [isSearchArticleModalOpen, setIsSearchArticleModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [articles, setArticles] = useState([]);
     const { user } = useAuth();
@@ -175,26 +177,36 @@ function RequestList() {
                 <div>
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold">Requests</h2>
-                        {!user.roles.includes("V") &&
-                            <button
-                                onClick={openCreatRequestModal}
-                                disabled={loading}
-                                type="button"
-                                className="flex flex-row items-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-2 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                            >{loading ? (
-                                <div role="status">
-                                    <svg aria-hidden="true" className="inline w-5 h-5 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor" />
-                                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill" />
-                                    </svg>
-                                    <span className="sr-only">Loading...</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <IoMdAdd size={20} />
-                                    <span className="mr-3">Create Request</span>
-                                </>
-                            )}</button>}
+                        <div className='flex justify-center'>
+                            {!user.roles.includes("V") &&
+                                <button
+                                    onClick={openCreatRequestModal}
+                                    disabled={loading}
+                                    type="button"
+                                    className="flex flex-row items-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-2 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2"
+                                >{loading ? (
+                                    <div role="status">
+                                        <svg aria-hidden="true" className="inline w-5 h-5 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor" />
+                                            <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill" />
+                                        </svg>
+                                        <span className="sr-only">Loading...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <IoMdAdd size={20} />
+                                        <span className="mr-3">Create Request</span>
+                                    </>
+                                )}</button>}
+                            {(user.roles.includes("V") || user.roles.includes("P")) &&
+                                <button
+                                    onClick={() => navigate('/budget')}
+                                    type="button"
+                                    className="flex flex-row items-center text-white bg-green-600 hover:bg-green-800 focus:ring-2 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2"
+                                >
+                                    Budget Table
+                                </button>}
+                        </div>
                     </div>
 
                     <div className="mb-4 flex space-x-4">
@@ -233,6 +245,15 @@ function RequestList() {
                             onChange={(e) => handleDateRangeChange(filters.startDate, e.target.value)}
                             className="p-2 border border-gray-300 rounded"
                         />
+                        <button
+                            className="flex items-center border border-gray-300 font-medium py-2 px-4 rounded hover:bg-[#ededed]"
+                            onClick={() => setIsSearchArticleModalOpen(true)}
+                        >
+                            <FaSearch style={{marginRight:5}} />
+                            <span>
+                                Search by Article
+                            </span>
+                        </button>
                     </div>
                     {isLoading ? (
                         <div className="text-center h-20">
@@ -258,9 +279,9 @@ function RequestList() {
                                     </tr>
                                 </thead>
                                 <tbody >
-                                    {requests?.totalCount === 0 && 
+                                    {requests?.totalCount === 0 &&
                                         <td colSpan={5} className="p-5 whitespace-nowrap text-xl text-center leading-6 font-medium text-gray-900 border-b">No requests !</td>
-                                    } 
+                                    }
                                     {requests?.items.map((request) => (
                                         <tr key={request.code}>
                                             <td className="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900 border-b">{request.code}</td>
@@ -322,7 +343,7 @@ function RequestList() {
                                                         >
                                                             <FaFile size={20} color="#5c5c5c" className="group-hover:scale-110 transition-transform" />
                                                         </button>)}
-                                                    {((user.roles.includes('V') && (request?.status === 6 || request?.status === 7 ||request?.status === 8 )) || (user.roles.includes('P') && (request?.status === 4 || request?.status === 1))) &&
+                                                    {((user.roles.includes('V') && (request?.status === 6 || request?.status === 7 || request?.status === 8)) || (user.roles.includes('P') && (request?.status === 4 || request?.status === 1))) &&
                                                         <button
                                                             onClick={() => navigate(`/offers-validation/${request.code}`)}
                                                             className="p-2 rounded-full group transition-all duration-500 flex item-center hover:bg-gray-200"
@@ -353,7 +374,7 @@ function RequestList() {
                                 </span>
                                 <div>
                                     <button
-                                        onClick={() =>handlePageChange(currentPage + 1)}
+                                        onClick={() => handlePageChange(currentPage + 1)}
                                         disabled={currentPage === requests?.totalPages || requests?.totalCount === 0}
                                         className={`py-2 px-4 rounded-md ${currentPage === requests?.totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-700 hover:bg-blue-100'}`}
                                     >
@@ -361,7 +382,7 @@ function RequestList() {
                                     </button>
                                     <select
                                         value={itemsPerPage}
-                                        onChange={(e) => {setCurrentPage(1);setItemsPerPage(Number(e.target.value))}}
+                                        onChange={(e) => { setCurrentPage(1); setItemsPerPage(Number(e.target.value)) }}
                                         className="p-2 border border-gray-300 rounded ms-5"
                                     >
                                         {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -374,6 +395,7 @@ function RequestList() {
                             </div>
                         </>
                     )}
+                    <CheapestOffersModal isOpen={isSearchArticleModalOpen} onClose={() => setIsSearchArticleModalOpen(false)} />
                     < ShowArticles
                         update={fetchArticle}
                         isOpen={isRequestDetailsModalOpen}

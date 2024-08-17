@@ -38,7 +38,7 @@ function EmailRequest({token, email, setEmail, vesibilityFunction}) {
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
                 Forgot Password
             </h1>
-            <form className="space-y-4 md:space-y-6" onSubmit={handleSubmitEvent}>
+            <form autoComplete='false' className="space-y-4 md:space-y-6" onSubmit={handleSubmitEvent}>
                 <div>
                     <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900">Your E-mail</label>
                     <input
@@ -47,7 +47,7 @@ function EmailRequest({token, email, setEmail, vesibilityFunction}) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5" 
-                        placeholder="exemple@gmail.com" 
+                        placeholder="exemple@elastomer-solutions.com" 
                         required 
                     />
                 </div>

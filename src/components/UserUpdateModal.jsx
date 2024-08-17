@@ -102,10 +102,10 @@ const UserUpdateModal = ({ isOpen, onRequestClose, user }) => {
         "email": email + "@elastomer-solutions.com",
         code,
         departement,
-        "isAdmin": role == "A",
-        "isPurchaser": role == "P",
-        "isRequester": role == "D" || role == "P" || role == "A",
-        "IsValidator": role == "V",
+        "isAdmin": role === "A",
+        "isPurchaser": role === "P",
+        "isRequester": role === "D" || role === "P" || role === "A",
+        "IsValidator": role === "V",
         "reOpenRequestAfterValidation": canReopenRequest
       });
   };

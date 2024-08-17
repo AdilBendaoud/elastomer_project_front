@@ -43,7 +43,7 @@ function PasswordReset({ email, code }) {
                 <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
                     Reset Your Password
                 </h1>
-                <form className="space-y-4 md:space-y-6" onSubmit={handleSubmitEvent}>
+                <form autoComplete='false' className="space-y-4 md:space-y-6" onSubmit={handleSubmitEvent}>
                     <div className="mb-6 relative">
                         <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900">New Password</label>
                         <input
