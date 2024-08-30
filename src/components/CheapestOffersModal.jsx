@@ -8,6 +8,7 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
     const [offers, setOffers] = useState([]);
     const [suggestions, setSuggestions] = useState([]);
     const [suggestionType, setSuggestionType] = useState('');
+    const [showSection, setShowSection] = useState(false);
 
     const fetchCheapestOffers = async () => {
         try {
@@ -17,7 +18,6 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
                     "description": productDescription
                 }
             });
-            console.log("before",response.data);
             const exchangeRates = await getExchangeRates();
             const convertedData = response?.data.map(item => {
                 return {
@@ -25,10 +25,11 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
                     "unitPrice": convertPriceToEUR(item.unitPrice, item.devise, exchangeRates).toFixed(2),
                 }
             })
+            setShowSection(true);
             setOffers(convertedData);
-            console.log(convertedData);
         } catch (error) {
             console.error('Error fetching offers:', error);
+            setShowSection(true);
         }
     };
 
@@ -82,7 +83,6 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
     }
 
     return (
-
         <Modal
             isOpen={isOpen}
             onRequestClose={closeModal}
@@ -90,10 +90,10 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
             className="z-50 bg-white p-6 rounded-lg shadow-lg max-w-3xl mx-auto mt-10"
             overlayClassName="z-50 fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-start"
         >
-            <div style={{ width: 550 }}>
+            <div style={{ width: 720 }}>
                 <h2 className="text-xl font-bold mb-4">Find Cheapest Offers</h2>
                 <div className='flex flex-row mb-8 items-end'>
-                    <div className="mr-4">
+                    <div className="mr-4 w-1/4">
                         <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900">Product Name</label>
                         <input
                             type="text"
@@ -117,7 +117,7 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
                             </ul>
                         )}
                     </div>
-                    <div className="mr-4">
+                    <div className="mr-4 w-2/4">
                         <label htmlFor="description" className="block mb-2 text-sm font-medium text-gray-900">Product Description</label>
                         <input
                             type="text"
@@ -144,25 +144,35 @@ const CheapestOffersModal = ({ isOpen, onClose }) => {
                     <button
                         style={{ height: 50, width: 150 }}
                         onClick={handleSubmit}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none"
+                        className="px-4 py-2 w-1/4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none"
                     >
                         Search Offers
                     </button>
                 </div>
-                <div className='max-h-96 overflow-y-auto'>
-                    {offers.length > 0 && (
-                        <div className="mt-6">
-                            <h3 className="text-lg font-semibold mb-2">Top 10 Cheapest Offers</h3>
-                            <ul className="space-y-2">
-                                {offers.map((offer, index) => (
-                                    <li key={index} className="border p-2 rounded-md">
-                                        <span className="font-medium">{offer.supplierName}</span>: € {offer.unitPrice}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
+                {showSection &&
+                    <div className='max-h-96 overflow-y-auto'>
+                        {offers.length === 0 && <p className='text-lg text-red-500 font-semibold text-center'>No offers found for this product !</p>}
+                        {offers.length > 0 && (
+                            <div className="mt-6">
+                                <h3 className="text-lg font-semibold mb-2">Top 10 Cheapest Offers</h3>
+                                <table className="table w-full border">
+                                    <tr>
+                                        <th className='px-4 py-2 text-left bg-gray-100 border'>Request Code</th>
+                                        <th className='px-4 py-2 text-left bg-gray-100 border'>Supplier</th>
+                                        <th className='px-4 py-2 text-left bg-gray-100 border'>Price In €</th>
+                                    </tr>
+                                    {offers.map((offer, index) => (
+                                        <tr>
+                                            <td className='px-4 py-2 text-left border'>{offer.request}</td>
+                                            <td className='px-4 py-2 text-left border'>{offer.supplierName}</td>
+                                            <td className='px-4 py-2 text-left border'>{offer.unitPrice}</td>
+                                        </tr>
+                                    ))}
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                }
             </div>
         </Modal>
     );

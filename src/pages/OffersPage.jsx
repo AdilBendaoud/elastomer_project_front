@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DataGrid, { textEditor } from 'react-data-grid';
-import 'react-data-grid/lib/styles.css';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { FaArrowLeftLong } from "react-icons/fa6";
@@ -11,6 +10,8 @@ const OffersPage = () => {
     const { user } = useAuth()
     const navigate = useNavigate();
     let { requestCode } = useParams();
+    const [deliveryFeeExists, SetDeliveryFeeExists] = useState(false);
+    const [articleWithoutDeliveryFee, setArticleWithoutDeliveryFee] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [articles, setArticles] = useState([]);
     const [request, setRequest] = useState(null);
@@ -22,6 +23,8 @@ const OffersPage = () => {
     const [selectedSupplierId, setSelectedSupplierId] = useState(null);
     const [bestSupplier, setBestSupplier] = useState(null);
     const currencyOptions = ['USD', 'EUR', 'MAD', 'GBP'];
+
+    console.log(deliveryFeeExists);
 
     const fetchSuppliers = useCallback(async () => {
         if (requestCode) {
@@ -36,9 +39,15 @@ const OffersPage = () => {
                     ...supplier,
                     currency: supplier.offer.length > 0 ? supplier.offer[0].devise : 'EUR' // Default currency
                 }));
+                var deliveryStatement = deliveryFeeExists;
                 data.map((supplier) => {
                     if (supplier.isSelectedForValidation) {
                         setSelectedSupplierId(supplier.id)
+                    }
+                    if (supplier.offer.length > 0 && deliveryStatement === false) {
+                        const exists = supplier.offer.some((offer) => offer.articleName === "Delivery Fee");
+                        SetDeliveryFeeExists(exists);
+                        deliveryStatement = exists
                     }
                 })
                 setSuppliers(suppliersWithCurrency);
@@ -48,11 +57,13 @@ const OffersPage = () => {
                 console.error('Error fetching data:', error);
                 setArticles([]);
                 setSuppliers([]);
-                setError('Invalid demandeCode. Please try again.');
+                setError("Error fetching data");
                 setLoading(false);
             }
         }
     }, [requestCode]);
+
+    //console.log(deliveryFeeExists);
 
     const fetchArticles = useCallback(async () => {
         if (requestCode) {
@@ -64,6 +75,7 @@ const OffersPage = () => {
                 }
                 const data = await response.json();
                 setArticles(data);
+                setArticleWithoutDeliveryFee(data.filter(i => i.name !== "Delivery Fee"))
                 setError('');
                 setLoading(false);
             } catch (error) {
@@ -99,6 +111,28 @@ const OffersPage = () => {
     }, [requestCode]);
 
     const rows = articles.map(article => {
+        const row = {
+            ...article,
+            ...suppliers.reduce((acc, supplier) => {
+                const offer = supplier.offer.find(o => o.demandeArticleId === article.id);
+                if (offer) {
+                    acc[`${supplier.nom}-unitPrice`] = offer.unitPrice;
+                    acc[`${supplier.nom}-discount`] = offer.discount;
+                    acc[`${supplier.nom}-totalPrice`] = offer.discount !== null ? (offer.unitPrice - offer.unitPrice*(offer.discount/100)) * article.quantity : '';
+                    acc[`${supplier.nom}-delay`] = offer.delay;
+                } else {
+                    acc[`${supplier.nom}-unitPrice`] = '';
+                    acc[`${supplier.nom}-totalPrice`] = '';
+                    acc[`${supplier.nom}-discount`] = '';
+                    acc[`${supplier.nom}-delay`] = '';
+                }
+                return acc;
+            }, {})
+        };
+        return row;
+    });
+
+    const rowsWithoutDeliveryFee = articleWithoutDeliveryFee.map(article => {
         const row = {
             ...article,
             ...suppliers.reduce((acc, supplier) => {
@@ -242,8 +276,7 @@ const OffersPage = () => {
             rows.forEach(row => {
                 const unitPrice = parseFloat(row[`${supplier.nom}-unitPrice`]) || 0;
                 const requestedQuantity = parseInt(row.quantity, 10) || 0;
-
-                if (unitPrice !== 0) {
+                if (unitPrice !== 0 && row.name !== "Delivery Fee") {
                     nbrItems++;
                 }
 
@@ -251,7 +284,7 @@ const OffersPage = () => {
                 totalPrice += unitPriceInEUR * requestedQuantity;
             });
 
-            if (nbrItems < rows.length) {
+            if (nbrItems < rows.length - 1) {
                 hasAllItems = false;
             }
 
@@ -361,8 +394,8 @@ const OffersPage = () => {
     const columns = [
         {
             key: 'article', name: `${requestCode}`, children: [
-                { key: 'name', name: 'Name', frozen: true, width: 150, resizable: true },
-                { key: 'description', name: 'Description', width: 150, resizable: true },
+                { key: 'name', name: 'Name', frozen: true, width: 150, minWidth: 150, resizable: true },
+                { key: 'description', name: 'Description', width: 150, minWidth: 150, resizable: true },
                 { key: 'quantity', name: 'Quantity', width: 100 },
             ]
         },
@@ -380,8 +413,8 @@ const OffersPage = () => {
     const staticColumns = [
         {
             key: 'article', name: `${requestCode}`, children: [
-                { key: 'name', name: 'Name', frozen: true, width: 150, resizable: true },
-                { key: 'description', name: 'Description', width: 150, resizable: true },
+                { key: 'name', name: 'Name', frozen: true, width: 150, minWidth: 150, resizable: true },
+                { key: 'description', name: 'Description', width: 150, minWidth: 150, resizable: true },
                 { key: 'quantity', name: 'Quantity', width: 100 },
             ]
         },
@@ -390,7 +423,7 @@ const OffersPage = () => {
             children: [
                 { key: `${supplier.nom}-unitPrice`, name: 'Unit Price', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
                 { key: `${supplier.nom}-discount`, name: 'Discount', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium"},
-                { key: `${supplier.nom}-totalPrice`, name: 'Total Price', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
+                { key: `${supplier.nom}-totalPrice`, name: 'Total Price', minWidth:150, cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
                 { key: `${supplier.nom}-delay`, name: 'Delay', cellClass: supplier.isSelectedForValidation && "bg-green-300 font-medium" },
             ]
         })),
@@ -423,12 +456,18 @@ const OffersPage = () => {
                         }
                     </div>
                     <DataGrid
-                        style={{ height: (rows.length + 2) * 40 + 'px' }}
-                        columns={((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) ? columns : staticColumns}
-                        rows={rows}
-                        onRowsChange={handleRowsChange}
-                        className="rdg-light text-center"
-                    />
+    style={{ height: (rows.length + 2) * 40 + 'px' }}
+    columns={((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) ? columns : staticColumns}
+    rows={
+        (request?.status === 2 || request?.status === 5) && user.roles.includes('P') 
+        ? rows 
+        : deliveryFeeExists 
+        ? rows 
+        : rowsWithoutDeliveryFee
+    }
+    onRowsChange={handleRowsChange}
+    className="rdg-light text-center"
+/>
                     {((request?.status === 2 || request?.status === 5) && user.roles.includes('P')) &&
                         <>
                             <div className="p-4 bg-white rounded-lg">

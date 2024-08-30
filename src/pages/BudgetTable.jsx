@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router-dom';
-import { FaArrowLeftLong } from 'react-icons/fa6';
+import { PiPencilSimpleLine } from 'react-icons/pi';
 
 const BudgetTable = () => {
     const [departement, setDepartement] = useState('');
@@ -20,8 +19,10 @@ const BudgetTable = () => {
         percentOfPurchases: Array(12).fill(0),
     });
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+    const [editMode, setEditMode] = useState(false);
 
+    const tableRef = useRef(null); 
+    
     useEffect(() => {
         if (departement) {
             axios.get(`${process.env.REACT_APP_API_ENDPOINT}/budget`, {
@@ -42,6 +43,17 @@ const BudgetTable = () => {
             });
         }
     }, [departement]);
+
+    useEffect(() => {
+        // Scroll to the current month
+        if (tableRef.current) {
+            const table = tableRef.current;
+            const columnWidth = 150;
+            const currentMonthIndex = 11; // Get current month index (0 = January, 11 = December)
+            const scrollPosition = columnWidth * currentMonthIndex; // Calculate the scroll position
+            table.scrollLeft = scrollPosition;
+        }
+    }, [budgetData]);
 
     const recalculateBudget = useCallback(() => {
         setBudgetData(prevBudgetData => {
@@ -103,6 +115,7 @@ const BudgetTable = () => {
                         'success'
                     );
                     setLoading(false);
+                    setEditMode(false);
                 }
             }).catch(error => {
                 Swal.fire(
@@ -122,85 +135,97 @@ const BudgetTable = () => {
     };
 
     return (
-        <div className="p-8 pt-32 bg-gray-100 min-h-screen">
-            <h1 className="text-3xl font-bold mb-8 text-center text-blue-600">Budget Management</h1>
-            <div>
-                <button
-                    onClick={() => navigate("/")}
-                    type="button"
-                    className="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 mb-4 flex items-center"
-                >
-                    <FaArrowLeftLong size={22} />
-                    <span className="ml-2">Back</span>
-                </button>
-            </div>
-            <div className="flex justify-between mb-8">
-                <select
-                    className="border p-2 rounded-lg text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={departement}
-                    onChange={(e) => setDepartement(e.target.value)}
-                >
-                    <option value="" disabled>Select Department</option>
-                    <option value="Maintenance General">Maintenance General</option>
-                    <option value="Inginierie">Inginierie</option>
-                    <option value="Logistique">Logistique</option>
-                    <option value="Production">Production</option>
-                    <option value="Qualite">Qualite</option>
-                    <option value="IT">IT</option>
-                    <option value="Ressources Humaines">Ressources Humaines</option>
-                    <option value="Finance">Finance</option>
-                </select>
-                <button
-                    onClick={handleSubmit}
-                    type="button"
-                    className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 shadow-md"
-                    disabled={loading}
-                >
-                    {loading ? 'Saving...' : 'Save Budget Data'}
-                </button>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="table-auto w-full bg-white border shadow-md rounded-lg">
-                    <thead>
-                        <tr className="bg-blue-500 text-white text-center">
-                            <th className="py-3 px-4 text-left">Budget Fields</th>
-                            {Array.from({ length: new Date().getMonth() + 1 }, (_, i) => (
-                                <th className="py-3 px-4" key={i}>
-                                    {new Date(2023, i).toLocaleString('default', { month: 'short' })}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {Object.entries(budgetData).map(([key, values], rowIndex) => (
-                            <tr key={key} className="text-center">
-                                <td className="py-3 px-4 border text-left bg-gray-50 font-semibold">{key.replace(/([A-Z])/g, ' $1').trim()}</td>
-                                {values.slice(0, new Date().getMonth() + 1).map((value, monthIndex) => (
-                                    <td className="py-3 px-4 border" key={monthIndex}>
-                                        {['initialBudget', 'salesBudget', 'salesForecast', 'adjustment', 'budgetIP'].includes(key) ? (
-                                            <input
-                                                min={0}
-                                                type="number"
-                                                value={value}
-                                                onChange={(e) => handleInputChange(e.target.value, monthIndex, key)}
-                                                className="border p-2 rounded-md w-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                        ) : (
-                                            <span className="text-gray-700">
+        <div className="py-9 px-8 bg-gray-100 min-h-screen">
+            <div className="px-6 py-4 border-2 border-gray-300 rounded-lg bg-white mt-24">
+                <div className="flex justify-between mb-5">
+                    <div>
+                        <select
+                            className="border p-2 mr-3 rounded-lg text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={departement}
+                            onChange={(e) => setDepartement(e.target.value)}
+                        >
+                            <option value="" disabled>Select Department</option>
+                            <option value="Maintenance General">Maintenance General</option>
+                            <option value="Inginierie">Inginierie</option>
+                            <option value="Logistique">Logistique</option>
+                            <option value="Production">Production</option>
+                            <option value="Qualite">Qualite</option>
+                            <option value="IT">IT</option>
+                            <option value="Ressources Humaines">Ressources Humaines</option>
+                            <option value="Finance">Finance</option>
+                        </select>
+                    </div>
+                    {
+                        departement && !editMode &&
+                        <button
+                            onClick={() => setEditMode(true)}
+                            type="button"
+                            className="flex text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 shadow-md"
+                            disabled={loading}
+                        >
+                            <PiPencilSimpleLine size={22} style={{marginRight:5}}/> <span> Edit Budget Data</span>
+                        </button>
+                    }
+                    {
+                        editMode &&
+                        <button
+                            onClick={handleSubmit}
+                            type="button"
+                            className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 shadow-md"
+                            disabled={loading}
+                        >
+                            {loading ? 'Saving...' : 'Save Budget Data'}
+                        </button>
+                    }
+                </div>
+                <div ref={tableRef} style={{overflowX:'scroll'}}>
+                    <table  className="table-auto w-full bg-white border shadow-md rounded-lg">
+                        <thead>
+                            <tr className="bg-blue-500 text-white text-center">
+                                <th className="py-3 px-4 text-left sticky left-0 bg-blue-500 z-10">Budget Fields</th>
+                                {Array.from({ length: new Date().getMonth() + 1 }, (_, i) => (
+                                    <th className="py-3 px-4" key={i}>
+                                        {new Date(2023, i).toLocaleString('default', { month: 'short' })}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {Object.entries(budgetData).map(([key, values], rowIndex) => (
+                                <tr key={key} className="text-center">
+                                    <td style={{ minWidth: 150 }} className="py-3 px-4 border text-left sticky left-0 bg-gray-50 font-semibold">{key.replace(/([A-Z])/g, ' $1').trim()}</td>
+                                    {values.slice(0, new Date().getMonth() + 1).map((value, monthIndex) => (
+                                        <td style={{ minWidth: 150 }} className="py-3 px-4 border" key={monthIndex}>
+                                            {!editMode ? <span className="text-gray-700">
                                                 {['percentOfSales', 'percentOfPurchases'].includes(key) ? (
                                                     `${value.toFixed(2)} %`
                                                 ) : (
                                                     `€ ${value.toFixed(2)}`
                                                 )}
-                                            </span>
-                                        )}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                            </span> : ['initialBudget', 'salesBudget', 'salesForecast', 'adjustment', 'budgetIP'].includes(key) ? (
+                                                <input
+                                                    min={0}
+                                                    type="number"
+                                                    value={value}
+                                                    onChange={(e) => handleInputChange(e.target.value, monthIndex, key)}
+                                                    className="w-full text-center bg-gray-50 border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            ) : (
+                                                <span className="text-gray-700">
+                                                    {['percentOfSales', 'percentOfPurchases'].includes(key) ? (
+                                                        `${value.toFixed(2)} %`
+                                                    ) : (
+                                                        `€ ${value.toFixed(2)}`
+                                                    )}
+                                                </span>
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

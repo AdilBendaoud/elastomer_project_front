@@ -11,7 +11,7 @@ import { FaCircleXmark, FaFileCircleCheck } from "react-icons/fa6";
 import ShowArticles from '../components/ShowArticles';
 import { FiSend } from "react-icons/fi";
 import SupplierSelectionModal from '../components/SupplierSelectionModal';
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { GrLinkNext, GrLinkPrevious } from "react-icons/gr";
 import CheapestOffersModal from '../components/CheapestOffersModal';
 
@@ -198,7 +198,7 @@ function RequestList() {
                                         <span className="mr-3">Create Request</span>
                                     </>
                                 )}</button>}
-                            {(user.roles.includes("V") || user.roles.includes("P")) &&
+                            {(user.roles.includes("P") && user.reOpenRequestAfterValidation) &&
                                 <button
                                     onClick={() => navigate('/budget')}
                                     type="button"

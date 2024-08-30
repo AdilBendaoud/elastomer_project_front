@@ -46,8 +46,8 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
         setSuggestions([]);
     };
 
-    const handleSupplierRemove = (supplierId) => {
-        setSelectedSuppliers(selectedSuppliers.filter(supplier => supplier.id !== supplierId));
+    const handleSupplierRemove = (supplierName) => {
+        setSelectedSuppliers(selectedSuppliers.filter(supplier => supplier.name !== supplierName));
     };
 
     const handleSearchChange = async (e) => {
@@ -72,17 +72,14 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
     const handleSubmit = async () => {
         const requestCode = request?.code;
         const userCode = user?.code;
-        const previouslySelectedSupplierIds = new Set(suppliers.filter(supplier => previouslySelectedSuppliers.includes(supplier.nom)).map(supplier => supplier.id));
-        const newSupplierIds = selectedSuppliers
-            .filter(supplier => !previouslySelectedSupplierIds.has(supplier.id))
-            .map(supplier => supplier.id);
+        const newSupplierNames = selectedSuppliers.map(supplier => supplier.name);
 
         try {
             setLoading(true);
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Suppliers/send-to-suppliers`, {
                 userCode,
                 requestCode,
-                supplierIds: newSupplierIds
+                supplierNames: newSupplierNames
             }, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -116,19 +113,23 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
         }
     };
 
+
     const handleReSend = async () => {
         const requestCode = request?.code;
         const userCode = user?.code;
-        const previouslySelectedSupplierIds = new Set(suppliers.filter(supplier => previouslySelectedSuppliers.includes(supplier.nom)).map(supplier => supplier.id));
-        const newSupplierIds = selectedSuppliers.filter(supplier => !previouslySelectedSupplierIds.has(supplier.id)).map(supplier => supplier.id);
-        var merged = new Set([...previouslySelectedSupplierIds, ...newSupplierIds])
+        const newSupplierNames = selectedSuppliers.map(supplier => supplier.name);
+
+        // Merge the previously selected supplier names with the new supplier names
+        const mergedSupplierNames = new Set([...previouslySelectedSuppliers, ...newSupplierNames]);
+
         try {
             setLoadingResend(true);
             const response = await axios.post(`${process.env.REACT_APP_API_ENDPOINT}/Suppliers/send-to-suppliers`, {
                 userCode,
                 requestCode,
-                supplierIds: Array.from(merged)
+                supplierNames: Array.from(mergedSupplierNames)
             });
+
             if (response.status === 200) {
                 Swal.fire({
                     title: "Success!",
@@ -155,7 +156,8 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
             console.error('Error sending request to suppliers:', error);
             setLoadingResend(false);
         }
-    }
+    };
+
 
     const closeModal = () => {
         setSuppliers([]);
@@ -205,7 +207,7 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
                     <div key={supplier.id} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full m-1 flex items-center">
                         {supplier.name}
                         <button
-                            onClick={() => handleSupplierRemove(supplier.id)}
+                            onClick={() => handleSupplierRemove(supplier.name)}
                             className="ml-2"
                         >
                             <FaXmark color='red' />
@@ -216,7 +218,7 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
             <div className='flex'>
                 <button
                     onClick={handleSubmit}
-                    disabled={loading || selectedSuppliers.length === 0}
+                    disabled={loading || selectedSuppliers.length === 0 || loadingResend}
                     className={(loading || selectedSuppliers.length === 0) ?
                         "w-full bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50" :
                         "w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"}
@@ -224,14 +226,16 @@ const SupplierSelectionModal = ({ isOpen, onRequestClose, request }) => {
                     {loading ? 'Sending...' : 'Send Request to New Selected Suppliers'}
                 </button>
                 <button
-                    disabled={loadingResend || previouslySelectedSuppliers.length === 0}
+                    disabled={loadingResend || previouslySelectedSuppliers.length === 0 || loading}
                     className={(loadingResend || previouslySelectedSuppliers.length === 0) ?
                         "flex items-center justify-center ml-5 w-full bg-gray-300 px-4 py-2 rounded-md cursor-not-allowed opacity-50" :
                         "flex items-center justify-center ml-5 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200"}
                     onClick={handleReSend}
                 >
                     <IoReload size={24} />
-                    <span className='ml-2'>Resend + New Selected Suppliters</span>
+                    <span className='ml-2'>
+                        {loadingResend ? 'Sending...' : 'Resend + New Selected Suppliers'}
+                    </span>
                 </button>
             </div>
         </Modal>
